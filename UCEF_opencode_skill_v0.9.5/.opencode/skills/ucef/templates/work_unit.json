@@ -1,0 +1,37 @@
+{
+  "work_unit_id": "WU-REPLACE-ME",
+  "scenario_id": "SCN-REPLACE-ME",
+  "work_type": "BUSINESS_STAGE_TRACE",
+  "phase": "EXCAVATE",
+  "objective": "本次分析唯一目标",
+  "source_ids": ["REPLACE_WITH_REGISTERED_SOURCE_ID"],
+  "entry_refs": [{"source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID", "symbol": "com.example.OrderService#createOrder", "kind": "METHOD"}],
+  "questions": [],
+  "target_fields": [],
+  "required_outputs": ["evidences", "fragments", "method_definitions", "trace_stages", "execution_nodes", "field_inventory", "field_lineage_steps"],
+  "checkpoint_policy": {
+    "max_uncheckpointed_probes": 1,
+    "resume_from_latest_checkpoint": true
+  },
+  "context_scope": {
+    "anchor_stage_id": null,
+    "anchor_execution_node_id": null,
+    "active_fields": [],
+    "load_full_scenario": false
+  },
+  "reuse": {
+    "logical_keys": [],
+    "method_symbols": [],
+    "source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID",
+    "repository": "UNKNOWN",
+    "code_hash": "UNKNOWN",
+    "binding_hash": "UNKNOWN"
+  },
+  "stop_conditions": [
+    "objective_satisfied",
+    "reached_complete_reusable_contract",
+    "reached_fully_described_external_boundary",
+    "opened_explicit_gap"
+  ],
+  "status": "PENDING"
+}
