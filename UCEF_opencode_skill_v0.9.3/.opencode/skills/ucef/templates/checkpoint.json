@@ -1,0 +1,57 @@
+{
+  "observations": [
+    {
+      "observation_kind": "CALL_EDGE",
+      "source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID",
+      "subject_key": "com.example.OrderService#createOrder",
+      "claim": "createOrder 调用 PaymentRouter#route，并传递 OrderCommand",
+      "evidence": {
+        "file": "src/main/java/com/example/OrderService.java",
+        "line_start": 42,
+        "line_end": 48,
+        "symbol": "OrderService#createOrder"
+      },
+      "confidence": "STATIC_VERIFIED",
+      "tags": ["chain-spine"]
+    }
+  ],
+  "checkpoint": {
+    "current_focus": {
+      "source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID",
+      "symbol": "com.example.OrderService#createOrder",
+      "question": "支付路由如何决定下一处理器"
+    },
+    "visited_refs": [
+      {
+        "source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID",
+        "kind": "METHOD",
+        "symbol": "com.example.OrderService#createOrder",
+        "outcome": "发现 PaymentRouter#route 交接"
+      }
+    ],
+    "chain_spine": [
+      {
+        "sequence_hint": 10,
+        "source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID",
+        "symbol": "OrderService#createOrder",
+        "business_role": "接收内部下单命令并进入支付路由",
+        "state": "CONFIRMED"
+      }
+    ],
+    "unresolved_questions": [
+      {
+        "question": "生产配置最终选择哪个 PaymentHandler",
+        "priority": "HIGH",
+        "blocking": true
+      }
+    ],
+    "next_probe": {
+      "source_id": "REPLACE_WITH_REGISTERED_SOURCE_ID",
+      "symbol": "PaymentRouter#route",
+      "reason": "确定路由输入、配置键和候选处理器",
+      "expected_answer": "当前场景的处理器及选择依据"
+    },
+    "resume_summary": "已确认下单服务进入 PaymentRouter；下一步只分析 route 的选择条件。",
+    "status": "ACTIVE"
+  }
+}

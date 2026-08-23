@@ -1,0 +1,31 @@
+{
+  "workspace": {
+    "format_version": "0.9.3",
+    "name": "REPLACE_WITH_ANALYSIS_WORKSPACE_NAME"
+  },
+  "database": {"path": "ucef.db"},
+  "sources": {
+    "registry": "sources.json",
+    "require_registered_evidence": true
+  },
+  "context": {
+    "max_total_tokens": 90000,
+    "reserved_output_tokens": 16000,
+    "max_fragment_records": 20,
+    "max_pending_observations": 40,
+    "max_chars_per_observation_preview": 2000,
+    "max_stage_records": 16,
+    "max_evidence_records": 40,
+    "max_gap_records": 20,
+    "max_chars_per_source_item": 10000
+  },
+  "checkpoint": {
+    "max_uncheckpointed_probes": 1,
+    "require_evidence_pointer": true
+  },
+  "site": {
+    "output": "site",
+    "auto_update": true,
+    "title": "UCEF Business Execution Dossiers"
+  }
+}

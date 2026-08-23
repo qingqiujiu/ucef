@@ -1,0 +1,3 @@
+## UCEF business-chain analysis
+
+Use the `ucef` skill for Java business execution excavation. UCEF uses an explicit independent analysis workspace; Java projects are registered read-only data sources and never receive `.ucef` state. Chat history is disposable: persist Observations and an append-only Checkpoint after each bounded probe, and resume from the ledger after compaction. Promote durable Observations into reusable behavior and a Scenario trace assembly. A deliverable must be readable by a Java developer unfamiliar with the system and must expose field origins, transformations, persistence, external request/response provenance, configuration routes, and explicit gaps.
