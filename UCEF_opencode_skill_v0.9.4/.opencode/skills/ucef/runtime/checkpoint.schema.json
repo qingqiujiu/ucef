@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UCEF v0.9.4 Probe Checkpoint",
+  "type": "object",
+  "required": ["observations", "checkpoint"],
+  "properties": {
+    "work_unit_id": {"type": "string"},
+    "scenario_id": {"type": "string"},
+    "observations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/Observation"}
+    },
+    "checkpoint": {"$ref": "#/$defs/Checkpoint"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Observation": {
+      "type": "object",
+      "required": ["observation_kind", "subject_key", "claim", "evidence", "confidence"],
+      "properties": {
+        "observation_id": {"type": "string"},
+        "observation_kind": {
+          "enum": ["CALL_EDGE", "ROUTE_RULE", "FIELD_FLOW", "TRANSFORMATION", "PERSISTENCE", "EXTERNAL_CALL", "CONFIG_VALUE", "ERROR_BEHAVIOR", "BUSINESS_RULE", "TYPE_BINDING", "TERMINAL_BEHAVIOR", "UNKNOWN"]
+        },
+        "source_id": {"type": "string"},
+        "subject_key": {"type": "string"},
+        "claim": {},
+        "evidence": {},
+        "confidence": {"enum": ["DISCOVERED", "CANDIDATE", "STATIC_VERIFIED", "SCENARIO_CONFIRMED", "UNKNOWN"]},
+        "tags": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "Checkpoint": {
+      "type": "object",
+      "required": ["current_focus", "visited_refs", "chain_spine", "unresolved_questions", "resume_summary", "status"],
+      "properties": {
+        "current_focus": {},
+        "visited_refs": {"type": "array"},
+        "chain_spine": {"type": "array"},
+        "execution_frontier": {"type": "array"},
+        "field_frontier": {"type": "array"},
+        "unresolved_questions": {"type": "array"},
+        "next_probe": {"type": ["object", "null"]},
+        "resume_summary": {"type": "string"},
+        "status": {"enum": ["ACTIVE", "READY_TO_PROMOTE", "COMPLETE", "BLOCKED"]},
+        "no_new_facts_reason": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  }
+}
