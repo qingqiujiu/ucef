@@ -1,0 +1,30 @@
+scenario_id: SCN-REPLACE-ME
+name: 替换为具体场景名称
+
+business:
+  product: UNKNOWN
+  customer_type: UNKNOWN
+  operation: UNKNOWN
+  payment_mode: UNKNOWN
+  lifecycle_scope:
+    - ORDER_CREATE
+
+request_constraints: {}
+
+config_constraints: {}
+
+known_routes: {}
+
+environment:
+  profile: UNKNOWN
+  region: UNKNOWN
+  code_revision: UNKNOWN
+  config_revision: UNKNOWN
+
+expected_entry:
+  class: UNKNOWN
+  method: UNKNOWN
+
+status: ACTIVE
+
+notes: ""

@@ -1,0 +1,745 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "ExecutionNode": {
+      "title": "UCEF ExecutionNode v0.2",
+      "type": "object",
+      "required": [
+        "node_id",
+        "kind",
+        "name",
+        "stage",
+        "fact_status",
+        "certainty",
+        "evidence_ids"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^NODE-"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "stage": {
+          "type": "string"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "scenario_scope": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "fact_status": {
+          "enum": [
+            "DISCOVERED",
+            "CANDIDATE",
+            "CONFIRMED",
+            "REJECTED",
+            "UNKNOWN"
+          ]
+        },
+        "certainty": {
+          "enum": [
+            "RUNTIME_CONFIRMED",
+            "CODE_CONFIRMED",
+            "CONFIG_CONFIRMED",
+            "INFERRED",
+            "UNKNOWN"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^EV-"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "ExecutionEdge": {
+      "title": "UCEF ExecutionEdge v0.2",
+      "type": "object",
+      "required": [
+        "edge_id",
+        "from",
+        "to",
+        "relation",
+        "scenario_id",
+        "fact_status",
+        "certainty",
+        "evidence_ids"
+      ],
+      "properties": {
+        "edge_id": {
+          "type": "string",
+          "pattern": "^EDGE-"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "CALL",
+            "EXECUTE_AFTER",
+            "ROUTE_TO",
+            "TRIGGER",
+            "LISTEN",
+            "PUBLISH",
+            "RETURN_TO",
+            "ASYNC_TO",
+            "COMPENSATE",
+            "RETRY",
+            "OTHER"
+          ]
+        },
+        "condition_ref": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "fact_status": {
+          "enum": [
+            "DISCOVERED",
+            "CANDIDATE",
+            "CONFIRMED",
+            "REJECTED",
+            "UNKNOWN"
+          ]
+        },
+        "certainty": {
+          "enum": [
+            "RUNTIME_CONFIRMED",
+            "CODE_CONFIRMED",
+            "CONFIG_CONFIRMED",
+            "INFERRED",
+            "UNKNOWN"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^EV-"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "Decision": {
+      "title": "UCEF Decision v0.2",
+      "type": "object",
+      "required": [
+        "decision_id",
+        "owner_node_id",
+        "decision_type",
+        "inputs",
+        "scenario_id",
+        "fact_status",
+        "certainty",
+        "evidence_ids"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "pattern": "^DEC-"
+        },
+        "owner_node_id": {
+          "type": "string"
+        },
+        "decision_type": {
+          "enum": [
+            "BRANCH",
+            "ROUTE",
+            "SELECT_IMPLEMENTATION",
+            "ENABLE_DISABLE",
+            "GUARD",
+            "RETRY",
+            "COMPENSATION",
+            "VALUE_RESOLUTION",
+            "OTHER"
+          ]
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source_type": {
+                "enum": [
+                  "REQUEST",
+                  "CONTEXT",
+                  "CONFIG",
+                  "STATE",
+                  "DATABASE",
+                  "RPC_RESULT",
+                  "HTTP_RESULT",
+                  "CACHE",
+                  "ENVIRONMENT",
+                  "TIME",
+                  "FEATURE_FLAG",
+                  "RULE_RESULT",
+                  "MESSAGE",
+                  "CONSTANT",
+                  "OTHER"
+                ]
+              },
+              "source_ref": {
+                "type": "string"
+              },
+              "value_in_scenario": {}
+            }
+          }
+        },
+        "expression": {
+          "type": "string"
+        },
+        "possible_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scenario_outcome": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "next_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "fact_status": {
+          "enum": [
+            "DISCOVERED",
+            "CANDIDATE",
+            "CONFIRMED",
+            "REJECTED",
+            "UNKNOWN"
+          ]
+        },
+        "certainty": {
+          "enum": [
+            "RUNTIME_CONFIRMED",
+            "CODE_CONFIRMED",
+            "CONFIG_CONFIRMED",
+            "INFERRED",
+            "UNKNOWN"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^EV-"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "DataMutation": {
+      "title": "UCEF DataMutation v0.2",
+      "type": "object",
+      "required": [
+        "mutation_id",
+        "target",
+        "operation",
+        "owner_node_id",
+        "scenario_id",
+        "fact_status",
+        "certainty",
+        "evidence_ids"
+      ],
+      "properties": {
+        "mutation_id": {
+          "type": "string",
+          "pattern": "^DM-"
+        },
+        "target": {
+          "type": "string"
+        },
+        "version_before": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "version_after": {
+          "type": "string"
+        },
+        "operation": {
+          "enum": [
+            "INIT",
+            "READ",
+            "COPY",
+            "DEFAULT",
+            "TRANSFORM",
+            "DERIVE",
+            "MERGE",
+            "APPEND",
+            "OVERRIDE",
+            "DELETE"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "condition_ref": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string"
+        },
+        "transform_expression": {
+          "type": "string"
+        },
+        "owner_node_id": {
+          "type": "string"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "business_effect": {
+          "type": "string"
+        },
+        "fact_status": {
+          "enum": [
+            "DISCOVERED",
+            "CANDIDATE",
+            "CONFIRMED",
+            "REJECTED",
+            "UNKNOWN"
+          ]
+        },
+        "certainty": {
+          "enum": [
+            "RUNTIME_CONFIRMED",
+            "CODE_CONFIRMED",
+            "CONFIG_CONFIRMED",
+            "INFERRED",
+            "UNKNOWN"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^EV-"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "Interaction": {
+      "title": "UCEF Interaction v0.2",
+      "type": "object",
+      "required": [
+        "interaction_id",
+        "interaction_type",
+        "owner_node_id",
+        "target",
+        "scenario_id",
+        "fact_status",
+        "certainty",
+        "evidence_ids"
+      ],
+      "properties": {
+        "interaction_id": {
+          "type": "string",
+          "pattern": "^INT-"
+        },
+        "interaction_type": {
+          "enum": [
+            "DATABASE",
+            "RPC",
+            "HTTP",
+            "MQ",
+            "EVENT_BUS",
+            "CACHE",
+            "CONFIG_CENTER",
+            "FILE",
+            "SCHEDULER",
+            "SDK",
+            "INTERNAL_PLATFORM",
+            "OTHER"
+          ]
+        },
+        "owner_node_id": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "READ",
+            "WRITE",
+            "SEND",
+            "RECEIVE",
+            "CALL",
+            "PUBLISH",
+            "SUBSCRIBE",
+            "OTHER"
+          ]
+        },
+        "condition_ref": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "target_field": {
+                "type": "string"
+              },
+              "transform": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source_field": {
+                "type": "string"
+              },
+              "local_target": {
+                "type": "string"
+              },
+              "business_usage": {
+                "type": "string"
+              },
+              "usage_status": {
+                "enum": [
+                  "CONFIRMED",
+                  "CANDIDATE",
+                  "UNKNOWN"
+                ]
+              }
+            }
+          }
+        },
+        "sync_mode": {
+          "enum": [
+            "SYNC",
+            "ASYNC",
+            "UNKNOWN"
+          ]
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "fact_status": {
+          "enum": [
+            "DISCOVERED",
+            "CANDIDATE",
+            "CONFIRMED",
+            "REJECTED",
+            "UNKNOWN"
+          ]
+        },
+        "certainty": {
+          "enum": [
+            "RUNTIME_CONFIRMED",
+            "CODE_CONFIRMED",
+            "CONFIG_CONFIRMED",
+            "INFERRED",
+            "UNKNOWN"
+          ]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^EV-"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "Evidence": {
+      "title": "UCEF Evidence",
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "type",
+        "source"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^EV-"
+        },
+        "type": {
+          "enum": [
+            "SOURCE_CODE",
+            "CONFIG",
+            "SQL",
+            "API_DEFINITION",
+            "RUNTIME_TRACE",
+            "LOG",
+            "DATABASE_SCHEMA",
+            "TEST_CASE",
+            "DOCUMENT",
+            "MANUAL_CONFIRMATION"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "repository_revision": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "line_start": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "line_end": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "snippet": {
+          "type": "string"
+        },
+        "content_hash": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "Unknown": {
+      "title": "UCEF Unknown",
+      "type": "object",
+      "required": [
+        "unknown_id",
+        "scenario_id",
+        "question",
+        "blocking"
+      ],
+      "properties": {
+        "unknown_id": {
+          "type": "string",
+          "pattern": "^UNK-"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "why_unknown": {
+          "type": "string"
+        },
+        "next_evidence_needed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "OPEN",
+            "RESOLVED",
+            "WONT_FIX"
+          ]
+        },
+        "work_unit_id": {
+          "type": "string"
+        }
+      }
+    },
+    "Conflict": {
+      "title": "UCEF Conflict",
+      "type": "object",
+      "required": [
+        "conflict_id",
+        "scenario_id",
+        "description",
+        "status"
+      ],
+      "properties": {
+        "conflict_id": {
+          "type": "string",
+          "pattern": "^CONFLICT-"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "type": "string"
+        },
+        "possible_causes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resolution": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "OPEN",
+            "RESOLVED"
+          ]
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "evidences": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      }
+    },
+    "execution_nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ExecutionNode"
+      }
+    },
+    "execution_edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ExecutionEdge"
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Decision"
+      }
+    },
+    "data_mutations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DataMutation"
+      }
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Interaction"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Unknown"
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Conflict"
+      }
+    },
+    "next_work_units": {
+      "type": "array"
+    }
+  },
+  "required": [
+    "evidences",
+    "execution_nodes",
+    "execution_edges",
+    "decisions",
+    "data_mutations",
+    "interactions",
+    "unknowns",
+    "conflicts",
+    "next_work_units"
+  ]
+}

@@ -1,0 +1,56 @@
+work_unit_id: WU-REPLACE-ME
+work_type: NODE_DEEP_DIVE
+
+objective: >
+  本次分析唯一目标。
+
+scenario_id: SCN-REPLACE-ME
+
+entry_refs:
+  - symbol: com.example.OrderService#createOrder
+    kind: METHOD
+
+scope:
+  include: []
+  exclude: []
+
+questions: []
+
+retrieval_hints:
+  symbols: []
+  fields: []
+  config_keys: []
+  text_queries: []
+  max_depth: 2
+  max_results_per_query: 20
+  include_callers: true
+  include_callees: true
+  include_implementations: true
+  include_references: true
+
+required_outputs:
+  - execution_nodes
+  - execution_edges
+  - decisions
+  - data_mutations
+  - interactions
+  - evidences
+  - unknowns
+  - conflicts
+
+stop_conditions:
+  - reached_external_boundary
+  - reached_confirmed_boundary
+  - source_missing
+  - scope_exceeded
+  - objective_satisfied
+
+verification_required: true
+status: PENDING
+
+# 默认不读取 Obsidian。只有本次任务确实需要人的历史理解/备注时才打开。
+human_context:
+  obsidian:
+    enabled: false
+    queries: []
+    max_notes: 3

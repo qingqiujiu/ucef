@@ -1,0 +1,33 @@
+# Unrelated local project
+java-project-deep-dive/
+
+# Python build/runtime cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# UCEF analysis workspace state (never commit production-derived analysis data)
+**/ucef.db
+**/*.sqlite
+**/*.sqlite3
+**/contexts/
+**/runs/
+**/site/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+credentials*
+secrets*
+
+# Editor / OS noise
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

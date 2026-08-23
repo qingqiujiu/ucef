@@ -1,0 +1,60 @@
+project_root: /REPLACE/WITH/YOUR/JAVA/PROJECT
+
+database:
+  path: .ucef/ucef.db
+
+context:
+  max_tokens: 60000
+  reserved_output_tokens: 12000
+  approx_chars_per_token: 4
+  max_fact_records: 120
+  max_unknown_records: 30
+  max_conflict_records: 20
+  max_retrieval_items: 80
+  max_chars_per_retrieval_item: 12000
+
+idea_mcp:
+  transport: none
+  bridge_command: ""
+  tools:
+    definition: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {symbol: "{symbol}"}}
+    references: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {symbol: "{symbol}", limit: "{limit}"}}
+    implementations: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {symbol: "{symbol}", limit: "{limit}"}}
+    callers: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {symbol: "{symbol}", limit: "{limit}"}}
+    callees: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {symbol: "{symbol}", limit: "{limit}"}}
+    text_search: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {query: "{query}", limit: "{limit}"}}
+
+obsidian:
+  transport: none
+  bridge_command: ""
+  vault: REPLACE_WITH_VAULT
+  tools:
+    search_notes: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {query: "{query}", limit: "{limit}"}}
+    read_note: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {path: "{path}"}}
+    upsert_note: {tool: REPLACE_WITH_ACTUAL_TOOL, arguments: {path: "{path}", content: "{content}"}}
+  context:
+    default_enabled: false
+    max_notes: 3
+    max_chars_per_note: 6000
+  export:
+    root_path: UCEF
+    mode: compact
+    preserve_manual: true
+    max_entity_notes: 30
+
+site:
+  enabled: true
+  output: .ucef/site
+  auto_update: true
+  title: UCEF Business Explorer
+  include_candidate: true
+  max_search_text: 1800
+  host: 127.0.0.1
+  port: 8765
+
+model:
+  mode: none
+  command: ""
+  endpoint: ""
+  api_key_env: UCEF_MODEL_API_KEY
+  model: ""

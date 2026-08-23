@@ -1,0 +1,42 @@
+systems:
+  - system_id: SYS-FLIGHT
+    name: 机票系统
+    description: 机票预订与订单域
+  - system_id: SYS-PAYMENT
+    name: 支付系统
+
+modules:
+  - module_id: MOD-ORDER
+    system_id: SYS-FLIGHT
+    name: 订单模块
+  - module_id: MOD-PAYMENT
+    system_id: SYS-FLIGHT
+    name: 支付协同模块
+
+tables:
+  - table_id: TABLE-flight_order
+    system_id: SYS-FLIGHT
+    module_id: MOD-ORDER
+    name: flight_order
+    comment: 机票订单主表
+    columns:
+      - name: id
+        data_type: bigint
+        nullable: false
+      - name: order_no
+        data_type: varchar(64)
+        nullable: false
+        comment: 订单号
+      - name: pay_type
+        data_type: varchar(32)
+        nullable: false
+        comment: 支付模式
+    indexes:
+      - name: PRIMARY
+        unique: true
+        type: BTREE
+        columns: [id]
+      - name: uk_order_no
+        unique: true
+        type: BTREE
+        columns: [order_no]
