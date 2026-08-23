@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UCEF v0.9.2 Work Unit Result",
+  "type": "object",
+  "properties": {
+    "scenario": {"$ref": "#/$defs/Scenario"},
+    "evidences": {"type": "array", "items": {"$ref": "#/$defs/Evidence"}},
+    "fragments": {"type": "array", "items": {"$ref": "#/$defs/Fragment"}},
+    "trace_stages": {"type": "array", "items": {"$ref": "#/$defs/TraceStage"}},
+    "route_decisions": {"type": "array", "items": {"$ref": "#/$defs/RouteDecision"}},
+    "field_lineage_steps": {"type": "array", "items": {"$ref": "#/$defs/FieldLineageStep"}},
+    "persistence_effects": {"type": "array", "items": {"$ref": "#/$defs/PersistenceEffect"}},
+    "external_interactions": {"type": "array", "items": {"$ref": "#/$defs/ExternalInteraction"}},
+    "gaps": {"type": "array", "items": {"$ref": "#/$defs/Gap"}},
+    "next_work_units": {"type": "array", "items": {"$ref": "#/$defs/WorkUnit"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Status": {"enum": ["DISCOVERED", "CANDIDATE", "STATIC_VERIFIED", "SCENARIO_CONFIRMED", "REJECTED", "UNKNOWN", "STALE"]},
+    "EvidenceIds": {"type": "array", "items": {"type": "string", "pattern": "^EV-"}, "minItems": 1},
+    "ObservationIds": {"type": "array", "items": {"type": "string", "pattern": "^OBS-"}},
+    "Scenario": {
+      "type": "object",
+      "required": ["scenario_id", "name", "business_operation", "business_goal", "trigger", "scope", "expected_outcome"],
+      "properties": {
+        "scenario_id": {"type": "string", "pattern": "^SCN-"},
+        "name": {"type": "string"},
+        "business_operation": {"type": "string"},
+        "business_goal": {"type": "string"},
+        "trigger": {"type": "object"},
+        "scope": {
+          "type": "object",
+          "required": ["source_ids"],
+          "properties": {
+            "source_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "source_revisions": {"type": "object", "additionalProperties": {"type": "string"}}
+          },
+          "additionalProperties": true
+        },
+        "expected_outcome": {"type": "string"},
+        "critical_fields": {"type": "array", "items": {"type": "string"}},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "status": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "Evidence": {
+      "type": "object",
+      "required": ["evidence_kind", "source", "observation"],
+      "properties": {
+        "evidence_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "evidence_kind": {"enum": ["SOURCE", "CONFIG", "BUILD", "TEST", "RUNTIME", "DATABASE_METADATA", "EXTERNAL_CONTRACT"]},
+        "source": {"oneOf": [{"type": "string"}, {"type": "object"}]},
+        "observation": {"type": "string"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"}
+      },
+      "additionalProperties": true
+    },
+    "Fragment": {
+      "type": "object",
+      "required": ["logical_key", "source_id", "name", "business_purpose", "entry_contract", "exit_contract", "status", "evidence_ids"],
+      "properties": {
+        "fragment_id": {"type": "string"},
+        "logical_key": {"type": "string"},
+        "source_id": {"type": "string"},
+        "name": {"type": "string"},
+        "business_purpose": {"type": "string"},
+        "repository": {"type": "string"},
+        "code_revision": {"type": "string"},
+        "code_hash": {"type": "string"},
+        "binding_hash": {"type": "string"},
+        "applicability": {"type": "object"},
+        "coverage": {"type": "object"},
+        "entry_contract": {"type": "object"},
+        "exit_contract": {"type": "object"},
+        "preconditions": {"type": "array"},
+        "postconditions": {"type": "array"},
+        "side_effects": {"type": "array"},
+        "handoffs": {"type": "array"},
+        "contract_complete": {"type": "boolean"},
+        "status": {"$ref": "#/$defs/Status"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "evidence_ids": {"$ref": "#/$defs/EvidenceIds"}
+      },
+      "additionalProperties": true
+    },
+    "TraceStage": {
+      "type": "object",
+      "required": ["scenario_id", "source_id", "sequence_no", "name", "business_purpose", "input", "processing", "output", "status"],
+      "properties": {
+        "stage_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "source_id": {"type": "string"},
+        "stage_key": {"type": "string"},
+        "sequence_no": {"type": "number"},
+        "stage_type": {"enum": ["ENTRY", "NORMALIZE", "LOAD_CONTEXT", "ROUTE", "PROCESS", "EXTERNAL", "PERSIST", "ASYNC", "TERMINAL"]},
+        "fragment_id": {"type": "string"},
+        "name": {"type": "string"},
+        "business_purpose": {"type": "string"},
+        "why_current": {"type": "string"},
+        "input": {},
+        "processing": {},
+        "output": {},
+        "state_changes": {"type": "array"},
+        "next_handoff": {},
+        "terminal": {"type": "boolean"},
+        "terminal_outcome": {},
+        "status": {"$ref": "#/$defs/Status"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "RouteDecision": {
+      "type": "object",
+      "required": ["scenario_id", "source_id", "question", "inputs", "current_outcome", "reason", "evidence_ids"],
+      "properties": {
+        "decision_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "source_id": {"type": "string"},
+        "stage_id": {"type": "string"},
+        "question": {"type": "string"},
+        "inputs": {"type": "array"},
+        "alternatives": {"type": "array"},
+        "current_outcome": {},
+        "reason": {"type": "string"},
+        "status": {"$ref": "#/$defs/Status"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "evidence_ids": {"$ref": "#/$defs/EvidenceIds"}
+      },
+      "additionalProperties": true
+    },
+    "FieldLineageStep": {
+      "type": "object",
+      "required": ["scenario_id", "source_id", "canonical_field", "sequence_no", "lineage_role", "operation", "source", "target", "business_use", "evidence_ids"],
+      "properties": {
+        "lineage_step_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "source_id": {"type": "string"},
+        "stage_id": {"type": "string"},
+        "canonical_field": {"type": "string"},
+        "sequence_no": {"type": "number"},
+        "lineage_role": {"enum": ["ORIGIN", "TRANSFORM", "SINK"]},
+        "java_location": {"type": "string"},
+        "source": {},
+        "target": {},
+        "operation": {"enum": ["COPY", "RENAME", "DEFAULT", "OVERRIDE", "COMPUTE", "CONVERT", "MERGE", "SPLIT", "DROP", "MASK", "PERSIST", "RESPONSE_MAPPING"]},
+        "transformation": {"type": "string"},
+        "condition": {},
+        "business_use": {"type": "string"},
+        "status": {"$ref": "#/$defs/Status"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "evidence_ids": {"$ref": "#/$defs/EvidenceIds"}
+      },
+      "additionalProperties": true
+    },
+    "Mapping": {
+      "type": "object",
+      "required": ["target", "value_source", "business_use"],
+      "properties": {
+        "canonical_field": {"type": "string"},
+        "target": {"type": "string"},
+        "value_source": {"type": "string"},
+        "transformation": {"type": "string"},
+        "business_use": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "PersistenceEffect": {
+      "type": "object",
+      "required": ["scenario_id", "source_id", "store", "operation", "mappings", "business_effect", "evidence_ids"],
+      "properties": {
+        "effect_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "source_id": {"type": "string"},
+        "stage_id": {"type": "string"},
+        "store": {"type": "string"},
+        "operation": {"enum": ["SELECT", "INSERT", "UPDATE", "UPSERT", "DELETE", "PUBLISH", "CACHE_READ", "CACHE_WRITE"]},
+        "condition": {},
+        "transaction_context": {},
+        "key_fields": {"type": "array"},
+        "mappings": {"type": "array", "items": {"$ref": "#/$defs/Mapping"}},
+        "business_effect": {"type": "string"},
+        "status": {"$ref": "#/$defs/Status"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "evidence_ids": {"$ref": "#/$defs/EvidenceIds"}
+      },
+      "additionalProperties": true
+    },
+    "RequestParameter": {
+      "type": "object",
+      "required": ["external_name", "internal_origin", "business_use"],
+      "properties": {
+        "canonical_field": {"type": "string"},
+        "external_name": {"type": "string"},
+        "internal_origin": {"type": "string"},
+        "transformation": {"type": "string"},
+        "business_use": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "ResponseParameter": {
+      "type": "object",
+      "required": ["external_name"],
+      "properties": {
+        "canonical_field": {"type": "string"},
+        "external_name": {"type": "string"},
+        "consumed": {"type": "boolean"},
+        "internal_target": {"type": "string"},
+        "transformation": {"type": "string"},
+        "business_use": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "ExternalInteraction": {
+      "type": "object",
+      "required": ["scenario_id", "source_id", "target_system", "operation", "business_purpose", "request_params", "response_params", "evidence_ids"],
+      "properties": {
+        "interaction_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "source_id": {"type": "string"},
+        "stage_id": {"type": "string"},
+        "target_system": {"type": "string"},
+        "operation": {"type": "string"},
+        "protocol": {"type": "string"},
+        "call_mode": {"type": "string"},
+        "trigger_condition": {},
+        "business_purpose": {"type": "string"},
+        "request_params": {"type": "array", "items": {"$ref": "#/$defs/RequestParameter"}},
+        "response_params": {"type": "array", "items": {"$ref": "#/$defs/ResponseParameter"}},
+        "error_behavior": {},
+        "status": {"$ref": "#/$defs/Status"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"},
+        "evidence_ids": {"$ref": "#/$defs/EvidenceIds"}
+      },
+      "additionalProperties": true
+    },
+    "Gap": {
+      "type": "object",
+      "required": ["scenario_id", "category", "severity", "question"],
+      "properties": {
+        "gap_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "stage_id": {"type": "string"},
+        "category": {"type": "string"},
+        "severity": {"enum": ["LOW", "MEDIUM", "HIGH"]},
+        "question": {"type": "string"},
+        "missing_evidence": {"type": "array"},
+        "suggested_work_type": {"type": "string"},
+        "observation_ids": {"$ref": "#/$defs/ObservationIds"}
+      },
+      "additionalProperties": true
+    },
+    "WorkUnit": {
+      "type": "object",
+      "required": ["scenario_id", "work_type", "objective"],
+      "properties": {
+        "work_unit_id": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "work_type": {"type": "string"},
+        "objective": {"type": "string"},
+        "source_ids": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    }
+  }
+}
