@@ -1,0 +1,67 @@
+{
+  "coverage_gates": [
+    {
+      "gate_id": "GATE-DEMO-PAY-IMPLEMENTATION",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "stage_id": "STAGE-DEMO-PAY",
+      "gate_type": "EXTERNAL",
+      "priority": "G1",
+      "question": "预付支付请求的字段来源、响应用途和失败行为是否闭合？",
+      "status": "CLOSED",
+      "evidence_ids": ["EV-DEMO-PAY"]
+    }
+  ],
+  "implementation_slices": [
+    {
+      "slice_id": "SLICE-DEMO-PAY",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "stage_id": "STAGE-DEMO-PAY",
+      "source_id": "order-service",
+      "sequence_no": 30,
+      "name": "构建并提交预付支付请求",
+      "business_purpose": "解释支付参数转换、外部调用和响应消费的实现",
+      "focus_mode": "BOUNDARY",
+      "method_path": [
+        {"symbol": "PrepaidPaymentService#pay"},
+        {"symbol": "PaymentRequestMapper#map"},
+        {"symbol": "PaymentClient#createPayment"}
+      ],
+      "execution_node_ids": [
+        "NODE-DEMO-PAY",
+        "NODE-DEMO-PAY-MAP",
+        "NODE-DEMO-PAY-EXTERNAL"
+      ],
+      "internal_steps": [
+        {
+          "sequence_no": 10,
+          "name": "映射并调用支付系统",
+          "field_reads": ["orderNo", "amount", "currency"],
+          "field_writes": ["paymentNo", "status", "amount"]
+        }
+      ],
+      "route_and_config": [{"condition": "payment.mode=PREPAID"}],
+      "field_effects": [{"field": "amount", "effect": "amount→payAmount→paidAmount"}],
+      "boundaries": [{"type": "EXTERNAL", "target": "PaymentSystem#createPayment"}],
+      "error_and_timing": [{"behavior": "同步调用，失败映射为 OrderPaymentException"}],
+      "technical_bridges": [
+        {
+          "from": "PaymentClient#createPayment",
+          "to": "HTTP request",
+          "framework": "Feign",
+          "reason": "标准代理转发；业务参数和失败语义已在边界契约中记录"
+        }
+      ],
+      "semantic_closure": {
+        "input_understood": true,
+        "decisions_understood": true,
+        "fields_understood": true,
+        "side_effects_understood": true,
+        "output_understood": true,
+        "unknowns_as_gaps": true
+      },
+      "closure_status": "COMPLETE",
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-PAY"]
+    }
+  ]
+}

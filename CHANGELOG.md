@@ -1,5 +1,19 @@
 # UCEF 版本迭代记录
 
+## v0.10.0 — 三层直接产物与硬预算调度
+
+- 默认分析只产生 `ScenarioPlan`、`BusinessBlock[]`、`ScenarioOverview`，移除 Skeleton → Slice → Integration 的结果搬运链。
+- 新增确定性 Runtime 队列；QUICK/STANDARD/DEEP 分别硬限制业务块、深挖块、模型任务、单 Worker 上下文和 15/30/45 分钟截止时间。
+- 子 Agent 通过 OpenCode 项目级自定义工具直接提交最终 JSON；Runtime 校验角色、结构、数量和覆盖，在同一事务中入库并返回幂等 receipt。
+- 父 Agent 只负责启动、取任务、派发固定角色和接收 receipt，不读取、拼接、修复或重写子 Agent 正文。
+- Planner 自动获得最多 30 条历史业务块 logical_key 索引，Block Worker 只获得同键最多 3 个紧凑候选，并必须记录精确复用、部分复用或新挖及依据，避免重读完整旧报告。
+- Planner、Block、Finalizer 分别限制为 8、12、5 steps；全部禁止编辑、命令执行和递归委派。Finalizer 禁止回读源码、配置和数据库。
+- 将重点判定固化为配置选路、P0 字段变化、外部/持久化边界、异常事务时序和最终结果；透明框架与普通透传只保留证据，不继续展开。
+- Plan 提交后立即生成业务骨架，Block 每提交一个就增量更新 HTML；默认视图按业务块展开实现，方法和源码移到折叠技术附录。
+- 直接模式可读性由三类最终产物确定，不再运行旧版审计触发扩张；达到时间或任务上限后发布已有内容与显式 Gap。
+- 横向对比可直接对齐 BusinessBlock、P0 字段旅程、配置路由、外部系统和持久化结果。
+- 保留 v0.9.x 数据模型、Checkpoint、方法树和字段图的导入与展示兼容，但从新工作区默认入口移除。
+
 ## v0.9.6 — 业务主链、实现切片与受控子 Agent
 
 - 将最终知识分为业务主链 `TraceStage`、跨方法 `ImplementationSlice`、底层 Evidence 三层，避免片段事实和完整方法树取代业务叙事。

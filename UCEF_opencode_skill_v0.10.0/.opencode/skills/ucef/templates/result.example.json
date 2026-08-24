@@ -1,0 +1,283 @@
+{
+  "scenario": {
+    "scenario_id": "SCN-DEMO-PREPAID",
+    "name": "预付订单创建",
+    "business_operation": "CREATE_ORDER",
+    "business_goal": "创建订单、完成预付支付并持久化支付结果",
+    "trigger": {"kind": "HTTP", "symbol": "OrderController#create", "input_type": "CreateOrderRequest"},
+    "scope": {
+      "source_ids": ["order-service"],
+      "source_revisions": {"order-service": "demo-rev-1"},
+      "environment": "prod",
+      "config_snapshot_id": "CFG-PROD-001",
+      "request_constraints": {"channel": "APP", "currency": "CNY"}
+    },
+    "critical_fields": ["orderNo", "amount", "paymentNo"],
+    "expected_outcome": "订单状态为 PAID，并保存支付流水号和实付金额",
+    "status": "ACTIVE"
+  },
+  "evidences": [
+    {
+      "evidence_id": "EV-DEMO-ENTRY",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "evidence_kind": "SOURCE",
+      "source": {"source_id": "order-service", "repository": "demo/order-service", "file": "OrderController.java", "line_start": 30, "line_end": 46, "symbol": "OrderController#create"},
+      "observation": "HTTP 请求被转换为 OrderCommand 并交给 OrderApplicationService。"
+    },
+    {
+      "evidence_id": "EV-DEMO-CONFIG",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "evidence_kind": "CONFIG",
+      "source": {"repository": "prod-config", "key": "payment.mode", "snapshot": "CFG-PROD-001"},
+      "observation": "生产有效值为 PREPAID。"
+    },
+    {
+      "evidence_id": "EV-DEMO-PAY",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "evidence_kind": "SOURCE",
+      "source": {"source_id": "order-service", "repository": "demo/order-service", "file": "PrepaidPaymentService.java", "line_start": 55, "line_end": 104, "symbol": "PrepaidPaymentService#pay"},
+      "observation": "构建 PaymentRequest，调用 PaymentClient#createPayment，并消费 paymentNo/status/paidAmount。"
+    },
+    {
+      "evidence_id": "EV-DEMO-SAVE",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "evidence_kind": "SOURCE",
+      "source": {"source_id": "order-service", "repository": "demo/order-service", "file": "OrderRepository.java", "line_start": 70, "line_end": 92, "symbol": "OrderRepository#savePaymentResult"},
+      "observation": "在当前事务中更新 flight_order 的状态、支付流水号和实付金额。"
+    }
+  ],
+  "fragments": [
+    {
+      "fragment_id": "FRAG-DEMO-PAYMENT-v1",
+      "logical_key": "payment.prepaid.submit",
+      "source_id": "order-service",
+      "name": "构建并提交预付支付请求",
+      "business_purpose": "向支付系统创建支付单并获得可用于订单落库的支付结果",
+      "repository": "demo/order-service",
+      "code_revision": "demo-rev-1",
+      "code_hash": "hash-payment-v1",
+      "binding_hash": "profile-prod-payment-client-v1",
+      "applicability": {"payment.mode": "PREPAID"},
+      "coverage": {"happy_path": true, "error_path": true, "response_mapping": true},
+      "entry_contract": {"type": "OrderPaymentContext", "requires": ["orderNo", "settlementAmount", "currency"]},
+      "exit_contract": {"type": "PaymentResult", "provides": ["paymentNo", "status", "paidAmount"]},
+      "preconditions": ["订单校验通过", "payment.mode=PREPAID"],
+      "postconditions": ["PaymentResult 已完成内部映射"],
+      "side_effects": ["调用 PaymentSystem#createPayment"],
+      "handoffs": ["保存支付结果"],
+      "contract_complete": true,
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-CONFIG"]
+    }
+  ],
+  "method_definitions": [
+    {"method_definition_id": "MDEF-DEMO-CONTROLLER", "source_id": "order-service", "symbol": "OrderController#create", "module": "order-web", "class_name": "OrderController", "method_name": "create", "signature": "CreateOrderResponse create(CreateOrderRequest)", "file": "OrderController.java", "line_start": 30, "line_end": 46, "code_hash": "hash-controller-create-v1", "input_contract": {"type": "CreateOrderRequest", "fields": ["orderNo", "amount", "currency", "channel"]}, "output_contract": {"type": "CreateOrderResponse", "fields": ["orderNo", "status", "paymentNo"]}, "throws": ["OrderCreateException"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"method_definition_id": "MDEF-DEMO-APP", "source_id": "order-service", "symbol": "OrderApplicationService#createOrder", "module": "order-application", "class_name": "OrderApplicationService", "method_name": "createOrder", "signature": "Order createOrder(OrderCommand)", "file": "OrderApplicationService.java", "line_start": 40, "line_end": 118, "code_hash": "hash-app-create-v1", "input_contract": {"type": "OrderCommand"}, "output_contract": {"type": "Order"}, "throws": ["OrderPaymentException"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-PAY", "EV-DEMO-SAVE"]},
+    {"method_definition_id": "MDEF-DEMO-ROUTER", "source_id": "order-service", "symbol": "PaymentRouter#route", "module": "payment-domain", "class_name": "PaymentRouter", "method_name": "route", "signature": "PaymentService route(String)", "file": "PaymentRouter.java", "line_start": 20, "line_end": 38, "code_hash": "hash-router-v1", "input_contract": {"config": "payment.mode"}, "output_contract": {"type": "PaymentService"}, "throws": [], "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"method_definition_id": "MDEF-DEMO-PAY", "source_id": "order-service", "symbol": "PrepaidPaymentService#pay", "module": "payment-application", "class_name": "PrepaidPaymentService", "method_name": "pay", "signature": "PaymentResult pay(OrderPaymentContext)", "file": "PrepaidPaymentService.java", "line_start": 55, "line_end": 104, "code_hash": "hash-payment-v1", "input_contract": {"type": "OrderPaymentContext"}, "output_contract": {"type": "PaymentResult"}, "throws": ["OrderPaymentException"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-CONFIG"]},
+    {"method_definition_id": "MDEF-DEMO-SAVE", "source_id": "order-service", "symbol": "OrderRepository#savePaymentResult", "module": "order-infrastructure", "class_name": "OrderRepository", "method_name": "savePaymentResult", "signature": "void savePaymentResult(Order, PaymentResult)", "file": "OrderRepository.java", "line_start": 70, "line_end": 92, "code_hash": "hash-save-v1", "input_contract": {"types": ["Order", "PaymentResult"]}, "output_contract": {"type": "void", "side_effect": "flight_order UPDATE"}, "throws": ["DataAccessException"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]}
+  ],
+  "trace_stages": [
+    {
+      "stage_id": "STAGE-DEMO-ENTRY",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_key": "ORDER_ENTRY",
+      "sequence_no": 10,
+      "stage_type": "ENTRY",
+      "name": "接收并标准化下单请求",
+      "business_purpose": "将外部请求转换为内部稳定的订单命令",
+      "why_current": "所有订单创建请求均从该 HTTP 入口进入",
+      "input": {"type": "CreateOrderRequest", "important_fields": ["orderNo", "amount", "currency", "channel"]},
+      "processing": "校验请求并映射为 OrderCommand",
+      "output": {"type": "OrderCommand"},
+      "next_handoff": "进入支付方式路由",
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-ENTRY"]
+    },
+    {
+      "stage_id": "STAGE-DEMO-ROUTE",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_key": "PAYMENT_ROUTE",
+      "sequence_no": 20,
+      "stage_type": "ROUTE",
+      "name": "选择预付支付链路",
+      "business_purpose": "根据生产配置选择支付处理器",
+      "why_current": "CFG-PROD-001 中 payment.mode 的有效值为 PREPAID",
+      "input": {"config": "payment.mode", "value": "PREPAID"},
+      "processing": "PaymentRouter 返回 PrepaidPaymentService",
+      "output": {"handler": "PrepaidPaymentService"},
+      "next_handoff": "构建并提交支付请求",
+      "status": "SCENARIO_CONFIRMED",
+      "evidence_ids": ["EV-DEMO-CONFIG"]
+    },
+    {
+      "stage_id": "STAGE-DEMO-PAY",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_key": "PAYMENT_SUBMIT",
+      "sequence_no": 30,
+      "stage_type": "EXTERNAL",
+      "fragment_id": "FRAG-DEMO-PAYMENT-v1",
+      "name": "创建外部支付单",
+      "business_purpose": "获得支付流水号、支付状态和实付金额",
+      "why_current": "当前路由已选择 PrepaidPaymentService",
+      "input": {"orderNo": "OrderCommand.orderNo", "amount": "Money.settlementAmount", "currency": "Money.currency"},
+      "processing": "映射 PaymentRequest 并调用 PaymentSystem#createPayment",
+      "output": {"type": "PaymentResult", "fields": ["paymentNo", "status", "paidAmount"]},
+      "next_handoff": "将支付结果写入订单",
+      "status": "SCENARIO_CONFIRMED",
+      "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-CONFIG"]
+    },
+    {
+      "stage_id": "STAGE-DEMO-SAVE",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_key": "ORDER_SAVE",
+      "sequence_no": 40,
+      "stage_type": "PERSIST",
+      "name": "保存支付结果",
+      "business_purpose": "持久化支付成功后的订单状态和支付信息",
+      "why_current": "PaymentResult.status=SUCCESS",
+      "input": {"type": "PaymentResult"},
+      "processing": "更新 Order 聚合并在事务中写入 flight_order",
+      "output": {"orderStatus": "PAID"},
+      "next_handoff": "返回创建成功结果",
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-SAVE"]
+    },
+    {
+      "stage_id": "STAGE-DEMO-END",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_key": "ORDER_RESULT",
+      "sequence_no": 50,
+      "stage_type": "TERMINAL",
+      "name": "返回已支付订单",
+      "business_purpose": "向调用方返回订单号、状态和支付流水号",
+      "why_current": "订单与支付结果已成功提交",
+      "input": {"type": "Order"},
+      "processing": "映射 CreateOrderResponse",
+      "output": {"type": "CreateOrderResponse", "status": "PAID"},
+      "terminal": true,
+      "terminal_outcome": "订单创建成功且状态为 PAID",
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-SAVE"]
+    }
+  ],
+  "execution_nodes": [
+    {"execution_node_id": "NODE-DEMO-MODULE", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "node_type": "MODULE", "sequence_no": 10, "module": "order-service", "name": "order-service", "business_purpose": "承载订单创建与预付支付主链路", "status": "STATIC_VERIFIED"},
+    {"execution_node_id": "NODE-DEMO-CONTROLLER", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-MODULE", "stage_id": "STAGE-DEMO-ENTRY", "method_definition_id": "MDEF-DEMO-CONTROLLER", "node_type": "METHOD_INVOCATION", "sequence_no": 20, "name": "OrderController#create（本次调用）", "business_purpose": "接收外部下单请求并返回创建结果", "input": {"type": "CreateOrderRequest"}, "output": {"type": "CreateOrderResponse"}, "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"execution_node_id": "NODE-DEMO-ENTRY-MAP", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-CONTROLLER", "stage_id": "STAGE-DEMO-ENTRY", "node_type": "STEP", "sequence_no": 21, "step_kind": "TRANSFORM", "name": "请求字段映射为 OrderCommand", "business_purpose": "建立稳定的内部命令字段", "processing": "逐字段复制 orderNo/amount/currency/channel", "field_reads": ["orderNo", "amount", "currency", "channel"], "field_writes": ["orderNo", "amount", "currency", "channel"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"execution_node_id": "NODE-DEMO-APP-CALL", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-CONTROLLER", "stage_id": "STAGE-DEMO-ENTRY", "node_type": "STEP", "sequence_no": 22, "step_kind": "CALL", "name": "调用订单应用服务", "business_purpose": "把内部命令交给业务主流程", "processing": "orderApplicationService.createOrder(command)", "field_reads": ["orderNo", "amount", "currency", "channel"], "field_writes": [], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"execution_node_id": "NODE-DEMO-APP", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-APP-CALL", "stage_id": "STAGE-DEMO-ROUTE", "method_definition_id": "MDEF-DEMO-APP", "node_type": "METHOD_INVOCATION", "sequence_no": 30, "name": "OrderApplicationService#createOrder（本次调用）", "business_purpose": "编排支付路由、支付调用和订单落库", "input": {"type": "OrderCommand"}, "output": {"type": "Order"}, "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-PAY", "EV-DEMO-SAVE"]},
+    {"execution_node_id": "NODE-DEMO-ROUTE-CALL", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-APP", "stage_id": "STAGE-DEMO-ROUTE", "node_type": "STEP", "sequence_no": 31, "step_kind": "ROUTE", "name": "按生产配置选择支付服务", "business_purpose": "确定当前订单应进入预付实现", "condition": "payment.mode=PREPAID", "processing": "paymentRouter.route(paymentMode)", "field_reads": ["paymentMode"], "field_writes": [], "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"execution_node_id": "NODE-DEMO-ROUTER", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-ROUTE-CALL", "stage_id": "STAGE-DEMO-ROUTE", "method_definition_id": "MDEF-DEMO-ROUTER", "node_type": "METHOD_INVOCATION", "sequence_no": 32, "name": "PaymentRouter#route（本次调用）", "business_purpose": "根据有效配置返回具体支付实现", "input": {"paymentMode": "PREPAID"}, "output": {"handler": "PrepaidPaymentService"}, "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"execution_node_id": "NODE-DEMO-ROUTE-SELECT", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-ROUTER", "stage_id": "STAGE-DEMO-ROUTE", "node_type": "STEP", "sequence_no": 33, "step_kind": "ROUTE", "name": "命中 PREPAID 分支", "business_purpose": "选中预付支付处理器", "condition": "paymentMode == PREPAID", "selected": true, "processing": "返回 PrepaidPaymentService Bean", "field_reads": ["paymentMode"], "field_writes": [], "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"execution_node_id": "NODE-DEMO-PAY-CALL", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-APP", "stage_id": "STAGE-DEMO-PAY", "node_type": "STEP", "sequence_no": 40, "step_kind": "CALL", "name": "调用预付支付", "business_purpose": "创建外部支付单", "processing": "paymentService.pay(context)", "field_reads": ["orderNo", "amount", "currency"], "field_writes": [], "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-CONFIG"]},
+    {"execution_node_id": "NODE-DEMO-PAY", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-PAY-CALL", "stage_id": "STAGE-DEMO-PAY", "method_definition_id": "MDEF-DEMO-PAY", "node_type": "METHOD_INVOCATION", "sequence_no": 41, "name": "PrepaidPaymentService#pay（本次调用）", "business_purpose": "构建支付请求并消费支付响应", "input": {"type": "OrderPaymentContext"}, "output": {"type": "PaymentResult"}, "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-CONFIG"]},
+    {"execution_node_id": "NODE-DEMO-PAY-MAP", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-PAY", "stage_id": "STAGE-DEMO-PAY", "node_type": "STEP", "sequence_no": 42, "step_kind": "TRANSFORM", "name": "构建 PaymentRequest", "business_purpose": "把内部订单字段映射为支付请求参数", "processing": "orderNo→merchantOrderNo，amount→payAmount，currency→currency", "field_reads": ["orderNo", "amount", "currency"], "field_writes": ["orderNo", "amount", "currency"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"execution_node_id": "NODE-DEMO-PAY-EXTERNAL", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-PAY", "stage_id": "STAGE-DEMO-PAY", "node_type": "STEP", "sequence_no": 43, "step_kind": "EXTERNAL", "name": "调用 PaymentSystem#createPayment", "business_purpose": "获得支付流水号、状态和实付金额", "processing": "同步 HTTP 调用并映射 PaymentResponse", "field_reads": ["orderNo", "amount", "currency"], "field_writes": ["paymentNo", "status", "amount"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"execution_node_id": "NODE-DEMO-SAVE-CALL", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-APP", "stage_id": "STAGE-DEMO-SAVE", "node_type": "STEP", "sequence_no": 50, "step_kind": "CALL", "name": "保存支付结果", "business_purpose": "把支付结果提交给持久化边界", "processing": "repository.savePaymentResult(order, paymentResult)", "field_reads": ["paymentNo", "status", "amount"], "field_writes": [], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]},
+    {"execution_node_id": "NODE-DEMO-SAVE", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-SAVE-CALL", "stage_id": "STAGE-DEMO-SAVE", "method_definition_id": "MDEF-DEMO-SAVE", "node_type": "METHOD_INVOCATION", "sequence_no": 51, "name": "OrderRepository#savePaymentResult（本次调用）", "business_purpose": "更新订单支付字段", "input": {"types": ["Order", "PaymentResult"]}, "output": {"type": "void"}, "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]},
+    {"execution_node_id": "NODE-DEMO-SAVE-MAP", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-SAVE", "stage_id": "STAGE-DEMO-SAVE", "node_type": "STEP", "sequence_no": 52, "step_kind": "PERSIST", "name": "映射并更新 flight_order", "business_purpose": "保存支付流水号、状态和实付金额", "condition": "paymentResult.status=SUCCESS", "processing": "UPDATE flight_order SET status/payment_no/paid_amount", "field_reads": ["paymentNo", "status", "amount"], "field_writes": ["paymentNo", "status", "amount"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]},
+    {"execution_node_id": "NODE-DEMO-RETURN", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "parent_node_id": "NODE-DEMO-APP", "stage_id": "STAGE-DEMO-END", "node_type": "STEP", "sequence_no": 60, "step_kind": "RETURN", "name": "返回已支付订单", "business_purpose": "向 Controller 返回最终业务结果", "processing": "构造 Order 并由入口映射响应", "field_reads": ["orderNo", "paymentNo", "status"], "field_writes": ["orderNo", "paymentNo", "status"], "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-SAVE"]}
+  ],
+  "field_inventory": [
+    {"field_id": "FIELD-DEMO-ORDERNO", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "orderNo", "priority": "P0", "tracking_status": "TRACKED", "entry_locations": ["HTTP request.orderNo"], "expected_sinks": ["PaymentRequest.merchantOrderNo", "CreateOrderResponse.orderNo"], "business_use": "订单主键、支付幂等和返回标识", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-PAY"]},
+    {"field_id": "FIELD-DEMO-AMOUNT", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "amount", "priority": "P0", "tracking_status": "TRACKED", "entry_locations": ["HTTP request.amount"], "expected_sinks": ["PaymentRequest.payAmount", "flight_order.paid_amount"], "business_use": "支付扣款和对账金额", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-PAY", "EV-DEMO-SAVE"]},
+    {"field_id": "FIELD-DEMO-PAYMENTNO", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "paymentNo", "priority": "P0", "tracking_status": "TRACKED", "entry_locations": ["PaymentResponse.paymentNo"], "expected_sinks": ["flight_order.payment_no", "CreateOrderResponse.paymentNo"], "business_use": "支付查询、退款、对账和返回", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-SAVE"]},
+    {"field_id": "FIELD-DEMO-STATUS", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "status", "priority": "P0", "tracking_status": "TRACKED", "entry_locations": ["PaymentResponse.status"], "expected_sinks": ["flight_order.status", "CreateOrderResponse.status"], "business_use": "决定订单状态和返回结果", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-SAVE"]},
+    {"field_id": "FIELD-DEMO-PAYMODE", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "paymentMode", "priority": "P0", "tracking_status": "TRACKED", "entry_locations": ["production config payment.mode"], "expected_sinks": ["PrepaidPaymentService branch"], "business_use": "选择支付实现", "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"field_id": "FIELD-DEMO-CURRENCY", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "currency", "priority": "P1", "tracking_status": "TRACKED", "entry_locations": ["HTTP request.currency"], "expected_sinks": ["PaymentRequest.currency"], "business_use": "指定支付币种和金额语义", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-PAY"]},
+    {"field_id": "FIELD-DEMO-CHANNEL", "scenario_id": "SCN-DEMO-PREPAID", "canonical_field": "channel", "priority": "P2", "tracking_status": "EXCLUDED", "entry_locations": ["HTTP request.channel"], "business_use": "记录请求渠道", "exclusion_reason": "当前 PREPAID 场景中只透传到审计日志，不参与路由、外部请求或落库", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]}
+  ],
+  "route_decisions": [
+    {
+      "decision_id": "DEC-DEMO-PAYMODE",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_id": "STAGE-DEMO-ROUTE",
+      "execution_node_id": "NODE-DEMO-ROUTE-SELECT",
+      "question": "使用哪一种支付处理器？",
+      "inputs": [{"kind": "CONFIG", "key": "payment.mode", "effective_value": "PREPAID"}],
+      "alternatives": ["PREPAID", "POSTPAID"],
+      "current_outcome": "PrepaidPaymentService",
+      "reason": "生产配置 payment.mode=PREPAID",
+      "status": "SCENARIO_CONFIRMED",
+      "evidence_ids": ["EV-DEMO-CONFIG"]
+    }
+  ],
+  "field_lineage_steps": [
+    {"lineage_step_id": "FLD-DEMO-ORDER-1", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-ENTRY", "execution_node_id": "NODE-DEMO-ENTRY-MAP", "canonical_field": "orderNo", "sequence_no": 10, "lineage_role": "ORIGIN", "java_location": "OrderMapper#toCommand", "source": "HTTP request.orderNo", "target": "OrderCommand.orderNo", "operation": "COPY", "expression": "command.setOrderNo(request.getOrderNo())", "data_type_before": "String", "data_type_after": "String", "null_behavior": "入口校验拒绝 null", "transformation": "无", "business_use": "订单业务主键和支付幂等键", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"lineage_step_id": "FLD-DEMO-ORDER-2", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-PAY", "execution_node_id": "NODE-DEMO-PAY-MAP", "canonical_field": "orderNo", "sequence_no": 20, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-ORDER-1"], "java_location": "PaymentRequestMapper#map", "source": "OrderCommand.orderNo", "target": "PaymentRequest.merchantOrderNo", "operation": "EXTERNAL_REQUEST", "expression": "request.setMerchantOrderNo(command.getOrderNo())", "transformation": "直接复制", "business_use": "支付侧幂等与订单关联", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"lineage_step_id": "FLD-DEMO-ORDER-3", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-END", "execution_node_id": "NODE-DEMO-RETURN", "canonical_field": "orderNo", "sequence_no": 30, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-ORDER-1"], "java_location": "OrderController#create", "source": "Order.orderNo", "target": "CreateOrderResponse.orderNo", "operation": "RETURN", "transformation": "直接复制", "business_use": "向调用方返回订单标识", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"lineage_step_id": "FLD-DEMO-AMOUNT-1", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-ENTRY", "execution_node_id": "NODE-DEMO-ENTRY-MAP", "canonical_field": "amount", "sequence_no": 10, "lineage_role": "ORIGIN", "java_location": "OrderMapper#toCommand", "source": "CreateOrderRequest.amount", "target": "OrderCommand.amount", "operation": "COPY", "data_type_before": "BigDecimal", "data_type_after": "BigDecimal", "null_behavior": "入口校验拒绝 null", "transformation": "无", "business_use": "原始订单金额", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"lineage_step_id": "FLD-DEMO-AMOUNT-2", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-PAY", "execution_node_id": "NODE-DEMO-PAY-MAP", "canonical_field": "amount", "sequence_no": 20, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-AMOUNT-1"], "java_location": "PaymentRequestMapper#map", "source": "OrderCommand.amount", "target": "PaymentRequest.payAmount", "operation": "EXTERNAL_REQUEST", "expression": "paymentRequest.setPayAmount(command.getAmount())", "transformation": "CNY 场景无需汇率转换", "condition": "currency=CNY", "business_use": "支付系统扣款金额", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"lineage_step_id": "FLD-DEMO-AMOUNT-RESP", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-PAY", "execution_node_id": "NODE-DEMO-PAY-EXTERNAL", "canonical_field": "amount", "sequence_no": 25, "lineage_role": "TRANSFORM", "previous_step_ids": ["FLD-DEMO-AMOUNT-2"], "java_location": "PaymentResultMapper#map", "source": "PaymentResponse.paidAmount", "target": "PaymentResult.paidAmount", "operation": "RESPONSE_MAPPING", "transformation": "支付侧确认的实付金额", "business_use": "作为最终落库和对账金额", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"lineage_step_id": "FLD-DEMO-AMOUNT-3", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-SAVE", "execution_node_id": "NODE-DEMO-SAVE-MAP", "canonical_field": "amount", "sequence_no": 30, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-AMOUNT-RESP"], "java_location": "OrderRepository#savePaymentResult", "source": "PaymentResult.paidAmount", "target": "flight_order.paid_amount", "operation": "PERSIST", "transformation": "无", "business_use": "实付金额和后续对账", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]},
+    {"lineage_step_id": "FLD-DEMO-PAYNO-1", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-PAY", "execution_node_id": "NODE-DEMO-PAY-EXTERNAL", "canonical_field": "paymentNo", "sequence_no": 10, "lineage_role": "ORIGIN", "java_location": "PaymentResultMapper#map", "source": "PaymentResponse.paymentNo", "target": "PaymentResult.paymentNo", "operation": "RESPONSE_MAPPING", "transformation": "无", "business_use": "支付查询、退款和订单关联", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"lineage_step_id": "FLD-DEMO-PAYNO-2", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-SAVE", "execution_node_id": "NODE-DEMO-SAVE-MAP", "canonical_field": "paymentNo", "sequence_no": 20, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-PAYNO-1"], "java_location": "OrderRepository#savePaymentResult", "source": "PaymentResult.paymentNo", "target": "flight_order.payment_no", "operation": "PERSIST", "transformation": "无", "business_use": "持久化支付关联标识", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]},
+    {"lineage_step_id": "FLD-DEMO-PAYNO-3", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-END", "execution_node_id": "NODE-DEMO-RETURN", "canonical_field": "paymentNo", "sequence_no": 30, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-PAYNO-2"], "java_location": "OrderController#create", "source": "Order.paymentNo", "target": "CreateOrderResponse.paymentNo", "operation": "RETURN", "transformation": "直接复制", "business_use": "向调用方返回支付关联标识", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-SAVE"]},
+    {"lineage_step_id": "FLD-DEMO-STATUS-1", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-PAY", "execution_node_id": "NODE-DEMO-PAY-EXTERNAL", "canonical_field": "status", "sequence_no": 10, "lineage_role": "ORIGIN", "java_location": "PaymentResultMapper#map", "source": "PaymentResponse.status", "target": "PaymentResult.status", "operation": "RESPONSE_MAPPING", "transformation": "外部状态映射内部枚举", "business_use": "决定订单是否进入 PAID", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]},
+    {"lineage_step_id": "FLD-DEMO-STATUS-2", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-SAVE", "execution_node_id": "NODE-DEMO-SAVE-MAP", "canonical_field": "status", "sequence_no": 20, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-STATUS-1"], "java_location": "OrderRepository#savePaymentResult", "source": "PaymentResult.status", "target": "flight_order.status", "operation": "PERSIST", "transformation": "SUCCESS → PAID", "business_use": "订单生命周期状态", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-SAVE"]},
+    {"lineage_step_id": "FLD-DEMO-STATUS-3", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-END", "execution_node_id": "NODE-DEMO-RETURN", "canonical_field": "status", "sequence_no": 30, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-STATUS-2"], "java_location": "OrderController#create", "source": "Order.status", "target": "CreateOrderResponse.status", "operation": "RETURN", "transformation": "内部枚举序列化", "business_use": "向调用方返回订单状态", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY", "EV-DEMO-SAVE"]},
+    {"lineage_step_id": "FLD-DEMO-MODE-1", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-ROUTE", "execution_node_id": "NODE-DEMO-ROUTE-CALL", "canonical_field": "paymentMode", "sequence_no": 10, "lineage_role": "ORIGIN", "java_location": "PaymentRouter#route", "source": "production config payment.mode", "target": "paymentMode", "operation": "READ", "transformation": "读取有效配置值 PREPAID", "business_use": "支付实现选路", "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"lineage_step_id": "FLD-DEMO-MODE-2", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-ROUTE", "execution_node_id": "NODE-DEMO-ROUTE-SELECT", "canonical_field": "paymentMode", "sequence_no": 20, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-MODE-1"], "java_location": "PaymentRouter#route", "source": "paymentMode", "target": "PrepaidPaymentService branch", "operation": "VALIDATE", "condition": "paymentMode=PREPAID", "transformation": "分支匹配", "business_use": "选中预付支付实现", "status": "SCENARIO_CONFIRMED", "evidence_ids": ["EV-DEMO-CONFIG"]},
+    {"lineage_step_id": "FLD-DEMO-CURRENCY-1", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-ENTRY", "execution_node_id": "NODE-DEMO-ENTRY-MAP", "canonical_field": "currency", "sequence_no": 10, "lineage_role": "ORIGIN", "java_location": "OrderMapper#toCommand", "source": "CreateOrderRequest.currency", "target": "OrderCommand.currency", "operation": "COPY", "transformation": "字符串转内部枚举", "business_use": "确定金额币种", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-ENTRY"]},
+    {"lineage_step_id": "FLD-DEMO-CURRENCY-2", "scenario_id": "SCN-DEMO-PREPAID", "source_id": "order-service", "stage_id": "STAGE-DEMO-PAY", "execution_node_id": "NODE-DEMO-PAY-MAP", "canonical_field": "currency", "sequence_no": 20, "lineage_role": "SINK", "previous_step_ids": ["FLD-DEMO-CURRENCY-1"], "java_location": "PaymentRequestMapper#map", "source": "OrderCommand.currency", "target": "PaymentRequest.currency", "operation": "EXTERNAL_REQUEST", "transformation": "内部枚举转外部 CNY 代码", "business_use": "指定支付币种", "status": "STATIC_VERIFIED", "evidence_ids": ["EV-DEMO-PAY"]}
+  ],
+  "persistence_effects": [
+    {
+      "effect_id": "DB-DEMO-ORDER",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_id": "STAGE-DEMO-SAVE",
+      "execution_node_id": "NODE-DEMO-SAVE-MAP",
+      "store": "flight_order",
+      "operation": "UPDATE",
+      "condition": "paymentResult.status=SUCCESS",
+      "transaction_context": "OrderApplicationService#createOrder transaction",
+      "key_fields": ["order_no"],
+      "mappings": [
+        {"canonical_field": "status", "target": "status", "value_source": "PaymentResult.status → OrderStatus.PAID", "transformation": "枚举映射", "business_use": "订单生命周期状态"},
+        {"canonical_field": "paymentNo", "target": "payment_no", "value_source": "PaymentResult.paymentNo", "transformation": "无", "business_use": "支付查询、退款和对账关联"},
+        {"canonical_field": "amount", "target": "paid_amount", "value_source": "PaymentResult.paidAmount", "transformation": "无", "business_use": "实付金额和后续对账"}
+      ],
+      "business_effect": "订单进入 PAID，并保存支付流水号与实付金额",
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-SAVE"]
+    }
+  ],
+  "external_interactions": [
+    {
+      "interaction_id": "EXT-DEMO-PAYMENT",
+      "scenario_id": "SCN-DEMO-PREPAID",
+      "source_id": "order-service",
+      "stage_id": "STAGE-DEMO-PAY",
+      "execution_node_id": "NODE-DEMO-PAY-EXTERNAL",
+      "target_system": "PaymentSystem",
+      "operation": "createPayment",
+      "protocol": "HTTP/JSON",
+      "call_mode": "SYNC",
+      "trigger_condition": "payment.mode=PREPAID 且订单校验通过",
+      "business_purpose": "创建支付单并获取支付结果",
+      "request_params": [
+        {"canonical_field": "orderNo", "external_name": "merchantOrderNo", "internal_origin": "OrderCommand.orderNo", "transformation": "直接复制", "business_use": "支付侧幂等与订单关联"},
+        {"canonical_field": "amount", "external_name": "payAmount", "internal_origin": "OrderCommand.amount", "transformation": "映射为 PaymentRequest.payAmount", "business_use": "支付扣款金额"},
+        {"canonical_field": "currency", "external_name": "currency", "internal_origin": "OrderCommand.currency", "transformation": "内部枚举转外部代码", "business_use": "指定支付币种"}
+      ],
+      "response_params": [
+        {"canonical_field": "paymentNo", "external_name": "paymentNo", "consumed": true, "internal_target": "PaymentResult.paymentNo", "transformation": "直接映射", "business_use": "落库并用于支付查询/退款"},
+        {"canonical_field": "status", "external_name": "status", "consumed": true, "internal_target": "PaymentResult.status", "transformation": "外部状态映射内部枚举", "business_use": "决定订单是否进入 PAID"},
+        {"canonical_field": "amount", "external_name": "paidAmount", "consumed": true, "internal_target": "PaymentResult.paidAmount", "transformation": "无", "business_use": "订单实付金额和对账"}
+      ],
+      "error_behavior": {"timeout": "3s", "retry": "最多 2 次，仅网络错误", "fallback": "失败后订单保持 INIT 并返回支付失败", "exception_mapping": "PaymentClientException → OrderPaymentException"},
+      "status": "STATIC_VERIFIED",
+      "evidence_ids": ["EV-DEMO-PAY", "EV-DEMO-CONFIG"]
+    }
+  ],
+  "gaps": [],
+  "next_work_units": []
+}

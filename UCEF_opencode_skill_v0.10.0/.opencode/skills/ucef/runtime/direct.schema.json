@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UCEF v0.10.0 Direct Final Artifacts",
+  "$defs": {
+    "ScenarioPlan": {
+      "type": "object",
+      "required": ["plan_id", "scenario_id", "run_id", "critical_fields", "terminal_outcome", "business_blocks"],
+      "properties": {
+        "plan_id": {"type": "string", "pattern": "^PLAN-"},
+        "scenario_id": {"type": "string"},
+        "run_id": {"type": "string", "pattern": "^RUN-"},
+        "critical_fields": {"type": "array", "items": {"type": "string"}},
+        "terminal_outcome": {"type": "string"},
+        "business_blocks": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "required": ["block_id", "logical_key", "sequence_no", "title", "business_goal", "depth", "reason"],
+            "properties": {
+              "block_id": {"type": "string", "pattern": "^BLOCK-"},
+              "logical_key": {"type": "string"},
+              "sequence_no": {"type": "number"},
+              "title": {"type": "string"},
+              "business_goal": {"type": "string"},
+              "depth": {"enum": ["SUMMARY", "STANDARD", "CRITICAL"]},
+              "reason": {"type": "string"},
+              "inputs": {"type": "array"},
+              "decision": {"type": "object"},
+              "expected_output": {},
+              "evidence_refs": {"type": "array"}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "BusinessBlock": {
+      "type": "object",
+      "required": [
+        "block_id", "logical_key", "scenario_id", "run_id", "sequence_no", "title", "business_goal",
+        "why_current", "inputs", "decision", "implementation_steps", "field_changes",
+        "external_calls", "persistence", "output", "error_behavior", "method_evidence",
+        "evidence_refs", "reuse", "status"
+      ],
+      "properties": {
+        "block_id": {"type": "string", "pattern": "^BLOCK-"},
+        "logical_key": {"type": "string"},
+        "scenario_id": {"type": "string"},
+        "run_id": {"type": "string", "pattern": "^RUN-"},
+        "sequence_no": {"type": "number"},
+        "title": {"type": "string"},
+        "business_goal": {"type": "string"},
+        "why_current": {"type": "string"},
+        "inputs": {"type": "array"},
+        "decision": {"type": "object"},
+        "implementation_steps": {"type": "array", "maxItems": 10},
+        "field_changes": {"type": "array"},
+        "external_calls": {"type": "array"},
+        "persistence": {"type": "array"},
+        "output": {},
+        "error_behavior": {"type": "array"},
+        "method_evidence": {"type": "array", "maxItems": 8},
+        "evidence_refs": {"type": "array"},
+        "reuse": {
+          "type": "object",
+          "required": ["decision", "basis"],
+          "properties": {
+            "decision": {"enum": ["NEW", "EXACT_REUSE", "PARTIAL_REUSE"]},
+            "candidate_block_id": {"type": "string"},
+            "basis": {},
+            "difference": {}
+          },
+          "additionalProperties": true
+        },
+        "status": {"enum": ["COMPLETE", "GAP"]}
+      },
+      "additionalProperties": true
+    },
+    "ScenarioOverview": {
+      "type": "object",
+      "required": [
+        "overview_id", "scenario_id", "run_id", "one_sentence", "business_context",
+        "selected_route", "ordered_block_ids", "key_field_journeys", "external_effects",
+        "persistence_effects", "failure_outcomes", "open_gaps"
+      ],
+      "properties": {
+        "overview_id": {"type": "string", "pattern": "^OVERVIEW-"},
+        "scenario_id": {"type": "string"},
+        "run_id": {"type": "string", "pattern": "^RUN-"},
+        "one_sentence": {"type": "string"},
+        "business_context": {"type": "string"},
+        "selected_route": {},
+        "ordered_block_ids": {"type": "array", "items": {"type": "string"}},
+        "key_field_journeys": {"type": "array"},
+        "external_effects": {"type": "array"},
+        "persistence_effects": {"type": "array"},
+        "failure_outcomes": {"type": "array"},
+        "open_gaps": {"type": "array"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

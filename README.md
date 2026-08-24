@@ -13,14 +13,14 @@ UCEF（Unified Code Excavation Framework）是面向大型 Java 系统的业务�
 
 ## 当前版本
 
-当前稳定版本为 **v0.9.6**：
+当前稳定版本为 **v0.10.0**：
 
-- [源码与 OpenCode Skill](UCEF_opencode_skill_v0.9.6/)
-- [安装说明](UCEF_opencode_skill_v0.9.6/README_INSTALL.md)
-- [发布压缩包](UCEF_opencode_skill_v0.9.6_release.zip)
-- [测试状态](UCEF_opencode_skill_v0.9.6/TEST_STATUS.md)
+- [源码与 OpenCode Skill](UCEF_opencode_skill_v0.10.0/)
+- [安装说明](UCEF_opencode_skill_v0.10.0/README_INSTALL.md)
+- [发布压缩包](UCEF_opencode_skill_v0.10.0_release.zip)
+- [测试状态](UCEF_opencode_skill_v0.10.0/TEST_STATUS.md)
 
-v0.9.6 将分析拆为业务主链、跨方法实现切片和证据三层。Skeleton、Slice、Integration Worker 通过可校验的任务胶囊协作，Coverage Gate 控制是否继续展开；HTML 默认从业务阶段进入实现细节，完整方法树保留为可展开证据。重复语义检查点不会再次写入，默认输入包压缩到约 24K，为 120K 上下文留出更大余量。
+v0.10.0 将默认流程压缩为 ScenarioPlan、BusinessBlock、ScenarioOverview 三类最终产物。STANDARD 最多 6 次模型任务和 30 分钟；子 Agent 直接校验入库，父 Agent 只接收 receipt，不再多层搬运与重写。Runtime 只提供紧凑历史业务块索引和同键复用候选，避免重读旧报告。HTML 从计划开始增量出现，业务块默认展开，字段、外部接口、落库和失败结果横向汇总，方法树仅作为折叠技术证据。
 
 ## OpenCode 集成
 
@@ -28,7 +28,7 @@ v0.9.6 将分析拆为业务主链、跨方法实现切片和证据三层。Skel
 
 - `ucef` Skill；
 - 全权限 `ucef-java-chain` 主 Agent；
-- 只读 `ucef-skeleton`、`ucef-slice`、`ucef-integration` 子 Agent；
+- 有硬 steps 上限的 `ucef-planner`、`ucef-block`、`ucef-finalizer` 子 Agent；
 - `padb` Skill 启动约束；
 - `index-mcp_*` IDEA 语义索引工具配置；
 - 独立 UCEF 工作区、SQLite 事实账本、审计和 HTML 生成运行时。
@@ -41,4 +41,4 @@ Java 项目始终是只读数据源。UCEF 的数据库、Work Unit、上下文�
 
 ## 验证
 
-v0.9.6 已通过 18 项运行时、工作区、分层调度、持久化记忆、方法树、字段谱系、OpenCode Agent 和 HTML 回归测试；发布包另做解压回归。运行时仅依赖 Python 3.10+ 标准库。
+v0.10.0 已通过 21 项运行时、硬预算、直接提交、幂等回执、工作区、旧数据兼容、方法树、字段谱系、OpenCode Agent 和 HTML 回归测试；发布包另做解压回归。运行时仅依赖 Python 3.10+ 标准库。

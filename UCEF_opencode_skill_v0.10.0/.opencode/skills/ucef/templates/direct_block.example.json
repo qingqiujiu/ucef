@@ -1,0 +1,29 @@
+{
+  "block_id": "BLOCK-DEMO-PAY",
+  "logical_key": "payment.prepaid.create",
+  "scenario_id": "SCN-DEMO-PREPAID",
+  "run_id": "RUN-REPLACE-ME",
+  "sequence_no": 30,
+  "title": "创建支付单",
+  "business_goal": "把内部订单数据转换为支付系统能处理的请求，并消费支付结果",
+  "why_current": "生产配置 payment.mode=PREPAID 选中预付实现",
+  "inputs": [{"name": "orderNo/amount", "origin": "订单命令", "business_use": "标识订单和支付金额"}],
+  "decision": {"condition": "payment.mode=PREPAID", "selected": "PrepaidPaymentService"},
+  "implementation_steps": [
+    {"name": "构建支付请求", "description": "从订单命令读取字段并完成金额单位转换", "fields": ["orderNo", "amount"]},
+    {"name": "调用支付系统", "description": "提交请求并读取支付流水与状态", "fields": ["paymentNo", "status"]}
+  ],
+  "field_changes": [
+    {"field": "amount", "from": "OrderCommand.amountFen", "transformation": "除以 100，分转元", "to": "PaymentRequest.amountYuan", "business_use": "支付系统扣款金额"}
+  ],
+  "external_calls": [
+    {"system": "PaymentSystem", "operation": "createPayment", "request": "orderNo/amountYuan", "response": "paymentNo/status", "business_effect": "创建支付单并获得结果"}
+  ],
+  "persistence": [],
+  "output": {"name": "PaymentResult", "business_use": "供后续落库和接口返回"},
+  "error_behavior": [{"condition": "超时或明确失败", "outcome": "返回支付失败并保留明确 Gap/错误码"}],
+  "method_evidence": [{"source_id": "order-service", "symbol": "PrepaidPaymentService#pay", "file": "src/main/java/demo/PrepaidPaymentService.java", "lines": "20-68", "purpose": "实现本业务块"}],
+  "evidence_refs": ["EV-DEMO-PAY"],
+  "reuse": {"decision": "NEW", "basis": "没有满足当前代码版本、生产绑定与字段覆盖的同 logical_key 候选"},
+  "status": "COMPLETE"
+}
