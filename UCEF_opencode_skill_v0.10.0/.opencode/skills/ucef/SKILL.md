@@ -15,7 +15,7 @@ UCEF 把多个 Java 项目和生产配置当作只读数据源，在独立工作
 2. `BusinessBlock[]`：每个重点块一次提交，正文同时说明业务目的、实现步骤、字段变化、配置选路、外部接口和落库。
 3. `ScenarioOverview`：只读取压缩后的 BusinessBlock，补充全链总结与横向字段旅程。
 
-方法、类、源码位置属于技术证据附录，不作为第四层叙事。子 Agent 的最终 JSON 通过 `ucef_submit_*` 直接校验并入库；父 Agent 只接收 receipt，不复制、不重写、不复审正文。
+方法、类、源码位置属于技术证据附录，不作为第四层叙事。子 Agent 的最终 JSON 通过 `ucef_submit_*` 直接校验并入库；父 Agent 只接收 receipt，不复制、不重写、不复审正文。每个任务胶囊自带角色专用 `output_contract` 和最小可填写模板，正常 Agent 不读取脚本、Schema 或示例文件。
 
 ## 默认执行
 
@@ -29,7 +29,15 @@ UCEF 把多个 Java 项目和生产配置当作只读数据源，在独立工作
 
 Runtime 的队列和截止时间是硬约束。审计、Gap、模型判断或“还能再找”都不得自动创建任务。达到预算时发布已有骨架和明确 Gap。
 
-开始前只需读取 [references/DIRECT_ANALYSIS_CONTRACT.md](references/DIRECT_ANALYSIS_CONTRACT.md)。修改存储或导入兼容层时才读取 [references/DATA_MODEL.md](references/DATA_MODEL.md)。旧 Work Unit、Checkpoint、CoverageGate 和 ImplementationSlice 仅用于导入 v0.9.x 数据，不属于默认分析路径。
+正常分析只遵循当前任务胶囊，不再额外读取参考文档。修改 Runtime 或诊断合同本身时才读取 [references/DIRECT_ANALYSIS_CONTRACT.md](references/DIRECT_ANALYSIS_CONTRACT.md)；修改存储或导入兼容层时才读取 [references/DATA_MODEL.md](references/DATA_MODEL.md)。旧 Work Unit、Checkpoint、CoverageGate 和 ImplementationSlice 仅用于导入 v0.9.x 数据，不属于默认分析路径。
+
+## 无脚本准备
+
+主 Agent 使用 `ucef_workspace_bootstrap` 创建独立工作区，使用 `ucef_source_register` 登记只读 Java 数据源，使用 `ucef_scenario_register` 按明确字段保存 Scenario。配置快照使用 `ucef_artifact_register`，站点重建使用 `ucef_site_build`。这些工具封装全部 CLI 参数；Agent 不打开 `scripts/`，也不创建中间 JSON 文件。
+
+`ucef_*` 均由当前项目的 `.opencode/tools/ucef.ts` 注册，是本地自定义工具而不是 MCP 工具。角色专用提交工具必须直接出现在对应 Worker 的可调用工具列表中。若缺失，Worker 只返回 `TOOL_UNAVAILABLE: <tool>`，主 Agent立即停止调度并报告安装或工具发现故障；双方都不得搜索 MCP、传回正文 JSON 或由父 Agent 代交。
+
+`ucef_control_next` 每次只返回当前任务、必要事实和 `output_contract.payload_template`。Worker 填值后调用合同指定的 submit 工具。Runtime 自动注入 run、scenario 和可生成的产物 ID；校验错误只返回错误代码、JSON 路径、期望值和修正提示，不回显大 payload。初次提交失败后只允许一次修正；再次失败时 Block 确定性转为 Gap，Planner 或 Finalizer 则停止当前运行。
 
 ## 工作区边界
 
@@ -38,7 +46,7 @@ Runtime 的队列和截止时间是硬约束。审计、Gap、模型判断或“
 - 源码证据保存 `source_id + 相对路径 + symbol/line`，不要复制大段源码。
 - 生产配置或数据库查询只回答当前块的选路、字段来源、映射或业务效果；不得扫描整个配置或数据库。
 - 不得持久化密钥、口令、令牌或个人敏感数据。
-- 需要保留原始配置结构时，由人或确定性工具使用 `artifact-add` 登记脱敏 JSON 快照；Agent 只引用 `artifact_id + JSON Pointer`，不得把完整制品读入上下文或写入 BusinessBlock。
+- 需要保留原始配置结构时，由人或 `ucef_artifact_register` 登记脱敏 JSON 快照；Agent 只引用 `artifact_id + JSON Pointer`，不得把完整制品读入上下文或写入 BusinessBlock。
 
 ## 深挖标准
 

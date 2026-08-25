@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ from .audit import audit_scenario
 from .compare import compare_scenarios
 from .context import ContextBuilder
 from .core import load_json, write_json
-from .direct import DirectAnalysisService
+from .direct import DirectAnalysisService, SubmissionContractError
 from .ledger import CheckpointLedger
 from .site import DossierSiteBuilder
 from .store import FactStore
@@ -79,6 +80,35 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bootstrap(args: argparse.Namespace) -> int:
+    workspace_root = Path(args.workspace).expanduser().resolve()
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    templates = runtime_root().parent / "templates"
+    copies = (
+        (templates / "config.json", workspace_root / "workspace.json"),
+        (templates / "sources.json", workspace_root / "sources.json"),
+        (templates / "scenario.json", workspace_root / "scenarios" / "scenario.example.json"),
+        (templates / "direct_plan.example.json", workspace_root / "runs" / "direct_plan.example.json"),
+        (templates / "direct_block.example.json", workspace_root / "runs" / "direct_block.example.json"),
+        (templates / "direct_overview.example.json", workspace_root / "runs" / "direct_overview.example.json"),
+    )
+    created, kept = [], []
+    for source, target in copies:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists():
+            kept.append(str(target))
+        else:
+            shutil.copy2(source, target)
+            created.append(str(target))
+    workspace = AnalysisWorkspace.open(workspace_root, args.config)
+    workspace.initialize_directories()
+    ArtifactStore(workspace.root).initialize()
+    store = make_store(workspace)
+    store.close()
+    emit({"status": "bootstrapped", **workspace.summary(), "created": created, "kept": kept})
+    return 0
+
+
 def cmd_analysis_start(args: argparse.Namespace) -> int:
     workspace = open_workspace(args)
     store = make_store(workspace)
@@ -119,9 +149,13 @@ def cmd_submit_direct(args: argparse.Namespace) -> int:
     payload = json.loads(raw)
     store = make_store(workspace)
     try:
-        result = DirectAnalysisService(store).submit(
-            args.kind, args.run_id, args.task_id, payload
-        )
+        try:
+            result = DirectAnalysisService(store).submit(
+                args.kind, args.run_id, args.task_id, payload
+            )
+        except SubmissionContractError:
+            DossierSiteBuilder(store, workspace.config, workspace.root).build()
+            raise
         site = DossierSiteBuilder(store, workspace.config, workspace.root).build()
         emit({**result, "site": site})
         return 0
@@ -155,7 +189,13 @@ def cmd_scenario_put(args: argparse.Namespace) -> int:
     config = workspace.config
     store = make_store(workspace)
     try:
-        scenario = load_json(workspace.resolve(args.file))
+        if args.file:
+            scenario = load_json(workspace.resolve(args.file))
+        else:
+            raw = args.payload if args.payload is not None else sys.stdin.read()
+            if not raw.strip():
+                raise ValueError("scenario-put requires --file, JSON on stdin, or --payload")
+            scenario = json.loads(raw)
         registered_sources = set(workspace.source_map())
         require_sources = bool((config.get("sources") or {}).get("require_registered_evidence", True))
         report = IngestionValidator(store, registered_sources, require_sources).ingest(
@@ -376,6 +416,8 @@ def build_parser() -> argparse.ArgumentParser:
     command.set_defaults(func=cmd_doctor)
     command = sub.add_parser("init")
     command.set_defaults(func=cmd_init)
+    command = sub.add_parser("bootstrap")
+    command.set_defaults(func=cmd_bootstrap)
 
     command = sub.add_parser("ingest")
     command.add_argument("--file", required=True)
@@ -384,7 +426,8 @@ def build_parser() -> argparse.ArgumentParser:
     command.set_defaults(func=cmd_ingest)
 
     command = sub.add_parser("scenario-put")
-    command.add_argument("--file", required=True, help="Raw Scenario JSON relative to workspace")
+    command.add_argument("--file", help="Raw Scenario JSON relative to workspace")
+    command.add_argument("--payload", help="Scenario JSON object; stdin is preferred")
     command.set_defaults(func=cmd_scenario_put)
 
     command = sub.add_parser("analysis-start")
@@ -504,6 +547,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return int(args.func(args) or 0)
+    except SubmissionContractError as exc:
+        emit(exc.as_dict())
+        return 2
     except (KeyError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
         emit({"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"})
         return 2

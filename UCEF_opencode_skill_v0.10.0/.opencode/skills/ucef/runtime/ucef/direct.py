@@ -42,6 +42,60 @@ REQUIRED_BLOCK_ARRAYS = (
     "method_evidence",
     "evidence_refs",
 )
+MAX_SUBMISSION_ATTEMPTS = 2
+
+
+class SubmissionContractError(ValueError):
+    """Compact, machine-readable feedback for one bounded correction."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str,
+        path: str,
+        expected: str,
+        received: Any = None,
+        hint: str = "Copy the task capsule output_contract.payload_template and change only its values.",
+    ):
+        super().__init__(message)
+        self.issue = {
+            "code": code,
+            "path": path,
+            "expected": expected,
+            "received": received,
+            "hint": hint,
+        }
+        self.corrections_remaining: int | None = None
+        self.task_status: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status": "ERROR",
+            "error_type": "SUBMISSION_CONTRACT",
+            "error": self.issue,
+            "corrections_remaining": self.corrections_remaining,
+            "task_status": self.task_status,
+        }
+
+
+def _contract_error(
+    message: str,
+    *,
+    code: str,
+    path: str,
+    expected: str,
+    received: Any = None,
+    hint: str = "Copy the task capsule output_contract.payload_template and change only its values.",
+) -> None:
+    raise SubmissionContractError(
+        message,
+        code=code,
+        path=path,
+        expected=expected,
+        received=received,
+        hint=hint,
+    )
 
 
 def _required(payload: dict[str, Any], fields: tuple[str, ...]) -> list[str]:
@@ -233,19 +287,186 @@ class DirectAnalysisService:
             counts[task["status"]] = counts.get(task["status"], 0) + 1
         return {"run": run, "task_counts": counts, "tasks": tasks}
 
+    def _output_contract(
+        self,
+        run: dict[str, Any],
+        task: dict[str, Any],
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        role = task["role"]
+        common = {
+            "contract_version": "1",
+            "runtime_injects": ["scenario_id", "run_id", "generated artifact id"],
+            "correction_policy": {
+                "max_attempts": MAX_SUBMISSION_ATTEMPTS,
+                "corrections_remaining": int(
+                    task.get("corrections_remaining", MAX_SUBMISSION_ATTEMPTS - 1)
+                ),
+            },
+            "instruction": "Fill this template and call the named submit tool once. Do not read scripts, schemas, or example files.",
+        }
+        if role == "PLANNER":
+            return {
+                **common,
+                "submit_tool": "ucef_submit_plan",
+                "required_fields": ["critical_fields", "terminal_outcome", "business_blocks"],
+                "limits": {
+                    "business_blocks": task["budget"]["max_business_blocks"],
+                    "detail_blocks": run["budget"]["max_detail_blocks"],
+                },
+                "payload_template": {
+                    "critical_fields": ["<P0 field>"],
+                    "terminal_outcome": "<final business outcome>",
+                    "business_blocks": [{
+                        "block_id": "BLOCK-<stable-id>",
+                        "logical_key": "<stable.business.key>",
+                        "sequence_no": 10,
+                        "title": "<reader-facing title>",
+                        "business_goal": "<why this block exists>",
+                        "depth": "SUMMARY|STANDARD|CRITICAL",
+                        "reason": "<why this depth is enough>",
+                        "inputs": [],
+                        "decision": {},
+                        "expected_output": {},
+                        "evidence_refs": [],
+                    }],
+                },
+            }
+        if role == "BLOCK":
+            planned = context["planned_block"]
+            return {
+                **common,
+                "submit_tool": "ucef_submit_block",
+                "required_fields": [
+                    "block_id", "logical_key", "sequence_no", "title", "business_goal",
+                    "why_current", "inputs", "decision", "implementation_steps",
+                    "field_changes", "external_calls", "persistence", "output",
+                    "error_behavior", "method_evidence", "evidence_refs", "reuse", "status",
+                ],
+                "limits": {"implementation_steps": 10, "method_evidence": 8},
+                "payload_template": {
+                    "block_id": task["block_id"],
+                    "logical_key": planned["logical_key"],
+                    "sequence_no": planned["sequence_no"],
+                    "title": planned["title"],
+                    "business_goal": planned["business_goal"],
+                    "why_current": "<active configuration, request condition, or prior handoff>",
+                    "inputs": [],
+                    "decision": planned.get("decision") or {},
+                    "implementation_steps": [],
+                    "field_changes": [],
+                    "external_calls": [],
+                    "persistence": [],
+                    "output": planned.get("expected_output") or {},
+                    "error_behavior": [],
+                    "method_evidence": [],
+                    "evidence_refs": planned.get("evidence_refs") or [],
+                    "reuse": {"decision": "NEW|EXACT_REUSE|PARTIAL_REUSE", "basis": "<evidence>"},
+                    "status": "COMPLETE|GAP",
+                },
+            }
+        block_ids = [str(block["block_id"]) for block in context["business_blocks"]]
+        return {
+            **common,
+            "submit_tool": "ucef_submit_overview",
+            "required_fields": [
+                "one_sentence", "business_context", "selected_route", "ordered_block_ids",
+                "key_field_journeys", "external_effects", "persistence_effects",
+                "failure_outcomes", "open_gaps",
+            ],
+            "payload_template": {
+                "one_sentence": "<one-sentence end-to-end outcome>",
+                "business_context": "<when and why this scenario runs>",
+                "selected_route": {},
+                "ordered_block_ids": block_ids,
+                "key_field_journeys": [],
+                "external_effects": [],
+                "persistence_effects": [],
+                "failure_outcomes": [],
+                "open_gaps": [],
+            },
+        }
+
+    def _release_finalizer_if_ready(self, run: dict[str, Any]) -> None:
+        remaining = self.store.conn.execute(
+            "SELECT COUNT(*) AS n FROM analysis_tasks WHERE run_id=? AND role='BLOCK' "
+            "AND status NOT IN ('COMPLETE','FAILED','SKIPPED')",
+            (run["run_id"],),
+        ).fetchone()["n"]
+        if remaining:
+            return
+        rows = self.store.conn.execute(
+            "SELECT payload_json FROM analysis_tasks WHERE run_id=? AND role='FINALIZER'", (run["run_id"],)
+        ).fetchall()
+        for row in rows:
+            finalizer = json.loads(row["payload_json"])
+            if finalizer.get("status") == "WAITING":
+                finalizer["status"] = "PENDING"
+                self._update_task(finalizer)
+        run["status"] = "FINALIZING"
+        self._update_run(run)
+
+    def _record_contract_failure(
+        self,
+        run: dict[str, Any],
+        task: dict[str, Any],
+        error: SubmissionContractError,
+    ) -> None:
+        failures = int(task.get("validation_failures") or 0) + 1
+        task["validation_failures"] = failures
+        task["last_validation_error"] = error.issue
+        task["last_validation_error_at"] = now_iso()
+        corrections_remaining = max(0, MAX_SUBMISSION_ATTEMPTS - failures)
+        task["corrections_remaining"] = corrections_remaining
+        if failures < MAX_SUBMISSION_ATTEMPTS:
+            task["status"] = "CLAIMED"
+        elif task.get("role") == "BLOCK":
+            task["status"] = "FAILED"
+            task["stop_reason"] = "SUBMISSION_CORRECTION_BUDGET_EXHAUSTED"
+            outline = self.store.get("business_blocks", str(task.get("block_id")))
+            if outline:
+                outline["status"] = "GAP"
+                self.store.upsert("business_blocks", outline, task["task_id"])
+            self.store.upsert("gaps", {
+                "gap_id": new_id("GAP"),
+                "scenario_id": run["scenario_id"],
+                "run_id": run["run_id"],
+                "category": "SUBMISSION_VALIDATION",
+                "severity": "MEDIUM",
+                "question": f"业务块 {task.get('block_id')} 在一次修正后仍未通过结构校验。",
+                "missing_evidence": [],
+                "status": "OPEN",
+                "auto_generated": True,
+                "source_task_id": task["task_id"],
+            }, task["task_id"])
+        else:
+            task["status"] = "FAILED"
+            task["stop_reason"] = "SUBMISSION_CORRECTION_BUDGET_EXHAUSTED"
+            run["status"] = "STOPPED"
+            run["stop_reason"] = "SUBMISSION_CORRECTION_BUDGET_EXHAUSTED"
+            self._update_run(run)
+        self._update_task(task)
+        if task.get("role") == "BLOCK" and task.get("status") == "FAILED":
+            self._release_finalizer_if_ready(run)
+        self.store.commit()
+        error.corrections_remaining = corrections_remaining
+        error.task_status = task["status"]
+
     def next_task(self, run_id: str) -> dict[str, Any]:
         run = self._run(run_id)
         row = self.store.conn.execute(
-            "SELECT payload_json FROM analysis_tasks WHERE run_id=? AND status='PENDING' ORDER BY sequence_no,task_id LIMIT 1",
+            "SELECT payload_json FROM analysis_tasks WHERE run_id=? AND status IN ('CLAIMED','PENDING') "
+            "ORDER BY CASE status WHEN 'CLAIMED' THEN 0 ELSE 1 END,sequence_no,task_id LIMIT 1",
             (run_id,),
         ).fetchone()
         if not row:
             return {"status": "NO_PENDING_TASK", **self.status(run_id)}
         task = json.loads(row["payload_json"])
-        task["status"] = "CLAIMED"
-        task["claimed_at"] = now_iso()
-        self._update_task(task)
-        self.store.commit()
+        if task["status"] == "PENDING":
+            task["status"] = "CLAIMED"
+            task["claimed_at"] = now_iso()
+            self._update_task(task)
+            self.store.commit()
         context: dict[str, Any] = {
             "scenario": self.store.get("scenarios", run["scenario_id"]),
             "task": task,
@@ -274,6 +495,7 @@ class DirectAnalysisService:
                 }
                 for block in self.store.list_collection("business_blocks", run["scenario_id"])
             ]
+        context["output_contract"] = self._output_contract(run, task, context)
         return {"status": "TASK", "context": context}
 
     def _receipt(self, run_id: str, task_id: str, kind: str, entity_id: str, payload_hash: str) -> dict[str, Any] | None:
@@ -311,14 +533,29 @@ class DirectAnalysisService:
 
     def submit(self, kind: str, run_id: str, task_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(payload, dict):
-            raise ValueError("Direct submission must be a JSON object")
+            _contract_error(
+                "Direct submission must be a JSON object",
+                code="TYPE_MISMATCH", path="$", expected="object", received=type(payload).__name__,
+            )
         if len(json.dumps(payload, ensure_ascii=False)) > 100000:
-            raise ValueError("Direct submission exceeds 100000 characters; submit one bounded final artifact")
+            _contract_error(
+                "Direct submission exceeds 100000 characters; submit one bounded final artifact",
+                code="PAYLOAD_TOO_LARGE", path="$", expected="at most 100000 characters",
+                received="over-limit payload",
+            )
         run = self._run(run_id)
         if payload.get("run_id") not in {None, run_id}:
-            raise ValueError("payload run_id does not match active run")
+            _contract_error(
+                "payload run_id does not match active run",
+                code="IDENTITY_MISMATCH", path="$.run_id", expected=run_id,
+                received="different run_id", hint="Omit run_id; Runtime injects it.",
+            )
         if payload.get("scenario_id") not in {None, run["scenario_id"]}:
-            raise ValueError("payload scenario_id does not match active run")
+            _contract_error(
+                "payload scenario_id does not match active run",
+                code="IDENTITY_MISMATCH", path="$.scenario_id", expected=run["scenario_id"],
+                received="different scenario_id", hint="Omit scenario_id; Runtime injects it.",
+            )
         role = {"plan": "PLANNER", "block": "BLOCK", "overview": "FINALIZER", "gap": None}.get(kind)
         if kind not in {"plan", "block", "overview", "gap"}:
             raise ValueError("kind must be plan, block, overview, or gap")
@@ -355,6 +592,10 @@ class DirectAnalysisService:
             receipt = self._record_receipt(run_id, task_id, kind, str(payload[id_field]), payload_hash)
             self.store.commit()
             return receipt
+        except SubmissionContractError as exc:
+            self.store.conn.rollback()
+            self._record_contract_failure(run, task, exc)
+            raise
         except Exception:
             self.store.conn.rollback()
             raise
@@ -362,22 +603,47 @@ class DirectAnalysisService:
     def _submit_plan(self, run: dict[str, Any], task: dict[str, Any], payload: dict[str, Any]) -> None:
         missing = _required(payload, ("plan_id", "business_blocks", "critical_fields", "terminal_outcome"))
         if missing:
-            raise ValueError("Plan missing required fields: " + ", ".join(missing))
+            _contract_error(
+                "Plan missing required fields: " + ", ".join(missing),
+                code="MISSING_REQUIRED_FIELDS", path="$", expected="all required ScenarioPlan fields",
+                received={"missing": missing},
+            )
         blocks = payload.get("business_blocks")
         if not isinstance(blocks, list) or not blocks:
-            raise ValueError("business_blocks must be a non-empty array")
+            _contract_error(
+                "business_blocks must be a non-empty array",
+                code="TYPE_MISMATCH", path="$.business_blocks", expected="non-empty array",
+                received=type(blocks).__name__,
+            )
         budget = run["budget"]
         if len(blocks) > budget["max_business_blocks"]:
-            raise ValueError("Plan exceeds hard business-block budget")
+            _contract_error(
+                "Plan exceeds hard business-block budget",
+                code="HARD_BUDGET_EXCEEDED", path="$.business_blocks",
+                expected=f"at most {budget['max_business_blocks']} blocks", received={"count": len(blocks)},
+                hint="Merge transparent handoffs; do not request more tasks.",
+            )
         seen: set[str] = set()
         for index, block in enumerate(blocks):
             missing_block = _required(block, ("block_id", "logical_key", "sequence_no", "title", "business_goal", "depth", "reason"))
             if missing_block:
-                raise ValueError(f"business_blocks[{index}] missing: {', '.join(missing_block)}")
+                _contract_error(
+                    f"business_blocks[{index}] missing: {', '.join(missing_block)}",
+                    code="MISSING_REQUIRED_FIELDS", path=f"$.business_blocks[{index}]",
+                    expected="all required block-outline fields", received={"missing": missing_block},
+                )
             if block["depth"] not in {"SUMMARY", "STANDARD", "CRITICAL"}:
-                raise ValueError(f"business_blocks[{index}].depth must be SUMMARY, STANDARD, or CRITICAL")
+                _contract_error(
+                    f"business_blocks[{index}].depth must be SUMMARY, STANDARD, or CRITICAL",
+                    code="INVALID_ENUM", path=f"$.business_blocks[{index}].depth",
+                    expected="SUMMARY|STANDARD|CRITICAL", received=str(block.get("depth")),
+                )
             if block["block_id"] in seen:
-                raise ValueError("Plan contains duplicate block_id")
+                _contract_error(
+                    "Plan contains duplicate block_id",
+                    code="DUPLICATE_ID", path=f"$.business_blocks[{index}].block_id",
+                    expected="unique block_id", received=str(block.get("block_id")),
+                )
             seen.add(block["block_id"])
         detail = [block for block in blocks if block["depth"] in {"STANDARD", "CRITICAL"}]
         detail.sort(key=lambda block: (0 if block["depth"] == "CRITICAL" else 1, float(block["sequence_no"])))
@@ -453,44 +719,68 @@ class DirectAnalysisService:
             ("block_id", "logical_key", "sequence_no", "title", "business_goal", "why_current", "decision", "output", "reuse"),
         )
         if missing:
-            raise ValueError("BusinessBlock missing required fields: " + ", ".join(missing))
+            _contract_error(
+                "BusinessBlock missing required fields: " + ", ".join(missing),
+                code="MISSING_REQUIRED_FIELDS", path="$", expected="all required BusinessBlock fields",
+                received={"missing": missing},
+            )
         if payload["block_id"] != task.get("block_id"):
-            raise ValueError("BusinessBlock does not match claimed task")
+            _contract_error(
+                "BusinessBlock does not match claimed task",
+                code="IDENTITY_MISMATCH", path="$.block_id", expected=str(task.get("block_id")),
+                received=str(payload.get("block_id")),
+            )
         for field in REQUIRED_BLOCK_ARRAYS:
             if not isinstance(payload.get(field), list):
-                raise ValueError(f"BusinessBlock requires explicit {field} array")
+                _contract_error(
+                    f"BusinessBlock requires explicit {field} array",
+                    code="TYPE_MISMATCH", path=f"$.{field}", expected="array; use [] when empty",
+                    received=type(payload.get(field)).__name__,
+                )
         if len(payload["method_evidence"]) > 8:
-            raise ValueError("BusinessBlock exceeds eight method-evidence references")
+            _contract_error(
+                "BusinessBlock exceeds eight method-evidence references",
+                code="HARD_BUDGET_EXCEEDED", path="$.method_evidence", expected="at most 8 items",
+                received={"count": len(payload["method_evidence"])},
+            )
         if len(payload["implementation_steps"]) > 10:
-            raise ValueError("BusinessBlock exceeds ten reader-relevant implementation steps")
+            _contract_error(
+                "BusinessBlock exceeds ten reader-relevant implementation steps",
+                code="HARD_BUDGET_EXCEEDED", path="$.implementation_steps", expected="at most 10 items",
+                received={"count": len(payload["implementation_steps"])},
+            )
         if not str(payload.get("business_goal") or "").strip() or not str(payload.get("why_current") or "").strip():
-            raise ValueError("BusinessBlock requires reader-ready business explanation")
+            _contract_error(
+                "BusinessBlock requires reader-ready business explanation",
+                code="EMPTY_EXPLANATION", path="$.business_goal|$.why_current",
+                expected="non-empty reader-facing text", received="empty text",
+            )
         reuse = payload.get("reuse")
         if not isinstance(reuse, dict) or reuse.get("decision") not in {"NEW", "EXACT_REUSE", "PARTIAL_REUSE"} or not reuse.get("basis"):
-            raise ValueError("BusinessBlock reuse requires decision NEW/EXACT_REUSE/PARTIAL_REUSE and a basis")
+            _contract_error(
+                "BusinessBlock reuse requires decision NEW/EXACT_REUSE/PARTIAL_REUSE and a basis",
+                code="INVALID_REUSE", path="$.reuse",
+                expected="{decision: NEW|EXACT_REUSE|PARTIAL_REUSE, basis: non-empty}",
+                received={"keys": sorted(reuse) if isinstance(reuse, dict) else []},
+            )
         outline = self.store.get("business_blocks", payload["block_id"])
         if outline and payload["logical_key"] != outline.get("logical_key"):
-            raise ValueError("BusinessBlock logical_key does not match its plan")
+            _contract_error(
+                "BusinessBlock logical_key does not match its plan",
+                code="IDENTITY_MISMATCH", path="$.logical_key", expected=str(outline.get("logical_key")),
+                received=str(payload.get("logical_key")),
+            )
         payload["depth"] = (outline or {}).get("depth", "STANDARD")
         payload["status"] = payload.get("status", "COMPLETE")
         if payload["status"] not in {"COMPLETE", "GAP"}:
-            raise ValueError("Submitted BusinessBlock status must be COMPLETE or GAP")
+            _contract_error(
+                "Submitted BusinessBlock status must be COMPLETE or GAP",
+                code="INVALID_ENUM", path="$.status", expected="COMPLETE|GAP",
+                received=str(payload.get("status")),
+            )
         task["status"] = "COMPLETE"
         self._update_task(task)
-        remaining = self.store.conn.execute(
-            "SELECT COUNT(*) AS n FROM analysis_tasks WHERE run_id=? AND role='BLOCK' AND status!='COMPLETE'",
-            (run["run_id"],),
-        ).fetchone()["n"]
-        if remaining == 0:
-            rows = self.store.conn.execute(
-                "SELECT payload_json FROM analysis_tasks WHERE run_id=? AND role='FINALIZER'", (run["run_id"],)
-            ).fetchall()
-            for row in rows:
-                finalizer = json.loads(row["payload_json"])
-                finalizer["status"] = "PENDING"
-                self._update_task(finalizer)
-            run["status"] = "FINALIZING"
-            self._update_run(run)
+        self._release_finalizer_if_ready(run)
 
     def _submit_overview(self, run: dict[str, Any], task: dict[str, Any], payload: dict[str, Any]) -> None:
         missing = _required(
@@ -502,15 +792,29 @@ class DirectAnalysisService:
             ),
         )
         if missing:
-            raise ValueError("ScenarioOverview missing required fields: " + ", ".join(missing))
+            _contract_error(
+                "ScenarioOverview missing required fields: " + ", ".join(missing),
+                code="MISSING_REQUIRED_FIELDS", path="$", expected="all required ScenarioOverview fields",
+                received={"missing": missing},
+            )
         valid_ids = {
             block["block_id"] for block in self.store.list_collection("business_blocks", run["scenario_id"])
         }
         if not isinstance(payload["ordered_block_ids"], list) or set(payload["ordered_block_ids"]) != valid_ids:
-            raise ValueError("ScenarioOverview ordered_block_ids must contain every BusinessBlock exactly once")
+            _contract_error(
+                "ScenarioOverview ordered_block_ids must contain every BusinessBlock exactly once",
+                code="COVERAGE_MISMATCH", path="$.ordered_block_ids",
+                expected=sorted(valid_ids),
+                received=payload.get("ordered_block_ids") if isinstance(payload.get("ordered_block_ids"), list) else type(payload.get("ordered_block_ids")).__name__,
+                hint="Use output_contract.payload_template.ordered_block_ids unchanged.",
+            )
         for field in ("key_field_journeys", "external_effects", "persistence_effects", "failure_outcomes", "open_gaps"):
             if not isinstance(payload[field], list):
-                raise ValueError(f"ScenarioOverview {field} must be an array")
+                _contract_error(
+                    f"ScenarioOverview {field} must be an array",
+                    code="TYPE_MISMATCH", path=f"$.{field}", expected="array; use [] when empty",
+                    received=type(payload.get(field)).__name__,
+                )
         payload["status"] = "COMPLETE"
         task["status"] = "COMPLETE"
         self._update_task(task)
@@ -521,7 +825,11 @@ class DirectAnalysisService:
     def _submit_gap(self, run: dict[str, Any], task: dict[str, Any], payload: dict[str, Any]) -> None:
         missing = _required(payload, ("gap_id", "category", "severity", "question"))
         if missing:
-            raise ValueError("Gap missing required fields: " + ", ".join(missing))
+            _contract_error(
+                "Gap missing required fields: " + ", ".join(missing),
+                code="MISSING_REQUIRED_FIELDS", path="$", expected="category, severity, and question",
+                received={"missing": missing},
+            )
         payload.setdefault("status", "OPEN")
         payload.setdefault("auto_generated", False)
         payload["source_task_id"] = task["task_id"]

@@ -4,6 +4,7 @@
 
 - 展示层升级为工程审计台：业务链路导航、确定性 SVG 时序图和按业务块联动的证据抽屉，图形由 Runtime 根据已提交事实生成，不增加模型输出负担。
 - 新增内容寻址的原始 JSON 制品库；配置快照自动脱敏并独立展示、搜索和下载，Scenario 与 Agent 上下文只保留 `artifact_id + JSON Pointer` 引用。
+- 任务胶囊增加角色专用最小输出合同；初始化、数据源、Scenario、制品和站点全部工具化，Agent 不再阅读脚本或完整 Schema。提交错误返回精确路径并硬限制一次修正，避免校验循环。
 - 默认分析只产生 `ScenarioPlan`、`BusinessBlock[]`、`ScenarioOverview`，移除 Skeleton → Slice → Integration 的结果搬运链。
 - 新增确定性 Runtime 队列；QUICK/STANDARD/DEEP 分别硬限制业务块、深挖块、模型任务、单 Worker 上下文和 15/30/45 分钟截止时间。
 - 子 Agent 通过 OpenCode 项目级自定义工具直接提交最终 JSON；Runtime 校验角色、结构、数量和覆盖，在同一事务中入库并返回幂等 receipt。

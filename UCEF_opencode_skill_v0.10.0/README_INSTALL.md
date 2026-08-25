@@ -23,10 +23,12 @@ java-analysis-controller/
 ## 初始化独立工作区
 
 ```bash
-python .opencode/skills/ucef/scripts/init_workspace.py --workspace D:/ucef/order-analysis
+python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis bootstrap
 python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis source-add --source-id gateway --path D:/repos/gateway
 python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis source-add --source-id order-core --path D:/repos/order-core
 ```
+
+`init_workspace.py` 仍作为兼容入口保留。使用 OpenCode 时无需执行或阅读这些脚本：主 Agent 可直接调用 `ucef_workspace_bootstrap`、`ucef_source_register` 和 `ucef_scenario_register`。
 
 把场景文件放到 `scenarios/` 并登记：
 
@@ -42,9 +44,11 @@ python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis 
 - `ucef-planner`：8 steps，建立一次业务骨架。
 - `ucef-block`：12 steps，最多 6 次定向检索，完成一个可直接展示的业务块。
 - `ucef-finalizer`：5 steps，只读压缩后的业务块，形成一次全局总览。
-- `.opencode/tools/ucef.ts`：把最终 JSON 通过 stdin 交给 Runtime 校验、事务入库、幂等回执和增量 HTML。
+- `.opencode/tools/ucef.ts`：封装工作区、数据源、Scenario、制品、站点和提交命令；把最终 JSON 交给 Runtime 校验、事务入库、幂等回执和增量 HTML。
 
-详细字段与停止条件见 `.opencode/skills/ucef/references/DIRECT_ANALYSIS_CONTRACT.md`。
+每个 `ucef_control_next` 任务胶囊自带角色专用 `output_contract.payload_template`。Agent 只填写该模板，不读取脚本、完整 Schema 或示例 JSON；run、scenario 和可生成的产物 ID 由 Runtime 注入。结构错误只返回精确字段路径，并且最多允许一次修正。详细合同仅供 Runtime 开发和人工诊断查看。
+
+所有 `ucef_*` 都是 `.opencode/tools/ucef.ts` 注册的本地自定义工具，不属于 MCP。若 Worker 的工具列表中没有对应的 `ucef_submit_plan`、`ucef_submit_block` 或 `ucef_submit_overview`，这是安装或工具发现故障：不要让 Worker 查 MCP、输出大段 JSON，主 Agent 也不要代交。确认 OpenCode 当前项目根目录就是含 `.opencode/` 的控制目录，并重新加载项目以重新发现工具，然后重新开始运行。
 
 ## index-mcp 与 padb
 

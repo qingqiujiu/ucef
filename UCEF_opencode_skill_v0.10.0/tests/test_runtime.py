@@ -22,7 +22,7 @@ from ucef.artifacts import ArtifactStore
 from ucef.cli import main as cli_main
 from ucef.compare import compare_scenarios
 from ucef.context import ContextBuilder
-from ucef.direct import DirectAnalysisService, MODE_BUDGETS
+from ucef.direct import DirectAnalysisService, MODE_BUDGETS, SubmissionContractError
 from ucef.ledger import CheckpointLedger
 from ucef.site import DossierSiteBuilder
 from ucef.store import FactStore
@@ -36,27 +36,57 @@ class OpenCodeAgentPackagingTests(unittest.TestCase):
         self.assertTrue(text.startswith("---\n"))
         frontmatter = text.split("---", 2)[1]
         self.assertIn("mode: primary", frontmatter)
-        self.assertIn("permission: allow", frontmatter)
+        self.assertIn("permission:", frontmatter)
+        self.assertIn('"*": deny', frontmatter)
         self.assertIn("steps: 30", frontmatter)
-        self.assertIn('"ucef_control_*": true', frontmatter)
+        self.assertIn('"ucef_control_*": allow', frontmatter)
+        self.assertIn('"ucef_workspace_*": allow', frontmatter)
+        self.assertIn('"ucef_scenario_*": allow', frontmatter)
+        self.assertIn("ucef-planner: allow", frontmatter)
+        self.assertIn("ucef-block: allow", frontmatter)
+        self.assertIn("ucef-finalizer: allow", frontmatter)
+        self.assertNotIn("tools:", frontmatter)
+        self.assertNotIn('"ucef_submit_*": allow', frontmatter)
         self.assertIn("加载 `ucef`", text)
         self.assertIn("receipt", text)
         self.assertIn("Java 项目只读", text)
+        self.assertIn("output_contract", text)
+        self.assertIn("TOOL_UNAVAILABLE", text)
         for name, role in (
             ("ucef-planner.md", "UCEF Planner"),
             ("ucef-block.md", "UCEF BusinessBlock Worker"),
             ("ucef-finalizer.md", "UCEF Finalizer"),
         ):
             worker = (PACKAGE_ROOT / ".opencode" / "agents" / name).read_text(encoding="utf-8")
+            worker_frontmatter = worker.split("---", 2)[1]
             self.assertIn("mode: subagent", worker)
-            self.assertIn("edit: deny", worker)
+            self.assertIn('"*": deny', worker_frontmatter)
             self.assertIn(role, worker)
-            self.assertIn("task: deny", worker)
+            self.assertNotIn("tools:", worker_frontmatter)
+            self.assertIn("TOOL_UNAVAILABLE", worker)
+
+        planner = (PACKAGE_ROOT / ".opencode" / "agents" / "ucef-planner.md").read_text(encoding="utf-8")
+        block = (PACKAGE_ROOT / ".opencode" / "agents" / "ucef-block.md").read_text(encoding="utf-8")
+        finalizer = (PACKAGE_ROOT / ".opencode" / "agents" / "ucef-finalizer.md").read_text(encoding="utf-8")
+        self.assertIn('"ucef_submit_plan": allow', planner)
+        self.assertNotIn('"ucef_submit_block": allow', planner)
+        self.assertIn('"ucef_submit_block": allow', block)
+        self.assertIn('"ucef_submit_gap": allow', block)
+        self.assertNotIn('"ucef_submit_plan": allow', block)
+        self.assertIn('"ucef_submit_overview": allow', finalizer)
+        self.assertNotIn('"ucef_submit_block": allow', finalizer)
 
         tool_text = (PACKAGE_ROOT / ".opencode" / "tools" / "ucef.ts").read_text(encoding="utf-8")
         self.assertIn("Bun.spawn", tool_text)
         self.assertIn("submit_block", tool_text)
         self.assertIn("payload", tool_text)
+        self.assertIn("tool.schema.object({}).passthrough()", tool_text)
+        self.assertNotIn("JSON.parse(args.payload)", tool_text)
+        for operation in (
+            "workspace_bootstrap", "source_register", "scenario_register",
+            "artifact_register", "site_build",
+        ):
+            self.assertIn(f"export const {operation}", tool_text)
 
 
 class UCEFv09Tests(unittest.TestCase):
@@ -366,7 +396,12 @@ class DirectAnalysisTests(unittest.TestCase):
     def test_three_layer_direct_flow_is_bounded_idempotent_and_reader_ready(self):
         started = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
         run_id = started["run"]["run_id"]
-        planner = self.service.next_task(run_id)["context"]["task"]
+        planner_context = self.service.next_task(run_id)["context"]
+        planner = planner_context["task"]
+        planner_contract = planner_context["output_contract"]
+        self.assertEqual("ucef_submit_plan", planner_contract["submit_tool"])
+        self.assertIn("business_blocks", planner_contract["payload_template"])
+        self.assertLess(len(json.dumps(planner_contract, ensure_ascii=False)), 5000)
         plan = self.plan_payload(run_id)
         accepted = self.service.submit("plan", run_id, planner["task_id"], plan)
         self.assertEqual("ACCEPTED", accepted["status"])
@@ -380,14 +415,22 @@ class DirectAnalysisTests(unittest.TestCase):
             claimed = self.service.next_task(run_id)
             if claimed["status"] != "TASK" or claimed["context"]["task"]["role"] != "BLOCK":
                 break
-            task = claimed["context"]["task"]
+            block_context = claimed["context"]
+            task = block_context["task"]
             self.assertNotIn("business_blocks", claimed["context"])
+            self.assertEqual("ucef_submit_block", block_context["output_contract"]["submit_tool"])
+            self.assertEqual(task["block_id"], block_context["output_contract"]["payload_template"]["block_id"])
             self.service.submit("block", run_id, task["task_id"], self.block_payload(task, run_id))
 
         finalizer = claimed["context"]
         self.assertEqual("FINALIZER", finalizer["task"]["role"])
         self.assertNotIn("scenario_plans", finalizer)
         self.assertEqual(5, len(finalizer["business_blocks"]))
+        self.assertEqual("ucef_submit_overview", finalizer["output_contract"]["submit_tool"])
+        self.assertEqual(
+            [f"BLOCK-DIRECT-{index}" for index in range(1, 6)],
+            finalizer["output_contract"]["payload_template"]["ordered_block_ids"],
+        )
         overview = {
             "overview_id": "OVERVIEW-DIRECT",
             "scenario_id": "SCN-DEMO-PREPAID",
@@ -457,6 +500,45 @@ class DirectAnalysisTests(unittest.TestCase):
             self.service.submit("plan", run_id, planner["task_id"], plan)
         tasks = self.service.status(run_id)["tasks"]
         self.assertEqual(1, len(tasks))
+
+    def test_claimed_task_is_replayed_and_structured_error_stops_retry_loop(self):
+        started = self.service.start("SCN-DEMO-PREPAID", "QUICK")
+        run_id = started["run"]["run_id"]
+        first = self.service.next_task(run_id)["context"]
+        invalid = {"critical_fields": [], "terminal_outcome": "结果", "business_blocks": []}
+        with self.assertRaises(SubmissionContractError) as first_error:
+            self.service.submit("plan", run_id, first["task"]["task_id"], invalid)
+        self.assertEqual("$.business_blocks", first_error.exception.issue["path"])
+        self.assertEqual(1, first_error.exception.corrections_remaining)
+        replay = self.service.next_task(run_id)["context"]
+        self.assertEqual(first["task"]["task_id"], replay["task"]["task_id"])
+        self.assertEqual(1, replay["output_contract"]["correction_policy"]["corrections_remaining"])
+        with self.assertRaises(SubmissionContractError) as second_error:
+            self.service.submit("plan", run_id, first["task"]["task_id"], invalid)
+        self.assertEqual(0, second_error.exception.corrections_remaining)
+        self.assertEqual("FAILED", second_error.exception.task_status)
+        stopped = self.service.status(run_id)
+        self.assertEqual("STOPPED", stopped["run"]["status"])
+        self.assertEqual("SUBMISSION_CORRECTION_BUDGET_EXHAUSTED", stopped["run"]["stop_reason"])
+
+    def test_block_validation_exhaustion_becomes_visible_gap_and_continues(self):
+        started = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
+        run_id = started["run"]["run_id"]
+        planner = self.service.next_task(run_id)["context"]["task"]
+        self.service.submit("plan", run_id, planner["task_id"], self.plan_payload(run_id))
+        block = self.service.next_task(run_id)["context"]["task"]
+        for expected_remaining in (1, 0):
+            with self.assertRaises(SubmissionContractError) as error:
+                self.service.submit("block", run_id, block["task_id"], {})
+            self.assertEqual(expected_remaining, error.exception.corrections_remaining)
+        status = self.service.status(run_id)
+        failed = next(task for task in status["tasks"] if task["task_id"] == block["task_id"])
+        self.assertEqual("FAILED", failed["status"])
+        gaps = self.store.list_collection("gaps", "SCN-DEMO-PREPAID")
+        self.assertEqual("SUBMISSION_VALIDATION", gaps[0]["category"])
+        next_block = self.service.next_task(run_id)["context"]["task"]
+        self.assertEqual("BLOCK", next_block["role"])
+        self.assertNotEqual(block["task_id"], next_block["task_id"])
 
     def test_elapsed_budget_stops_run_and_returns_publishable_status(self):
         started = self.service.start("SCN-DEMO-PREPAID", "QUICK")
@@ -723,6 +805,45 @@ class IndependentWorkspaceTests(unittest.TestCase):
     def test_workspace_artifact_path_cannot_escape(self):
         with self.assertRaisesRegex(ValueError, "must stay inside workspace"):
             self.workspace.resolve("../leaked.db")
+
+    def test_cli_bootstrap_and_stdin_scenario_registration_need_no_agent_files(self):
+        workspace_root = self.root / "agent-prepared-workspace"
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = cli_main(["--workspace", str(workspace_root), "bootstrap"])
+        self.assertEqual(0, result)
+        receipt = json.loads(output.getvalue())
+        self.assertEqual("bootstrapped", receipt["status"])
+        self.assertTrue((workspace_root / "workspace.json").exists())
+        self.assertTrue((workspace_root / "artifacts" / "index.json").exists())
+
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(0, cli_main([
+                "--workspace", str(workspace_root), "source-add",
+                "--source-id", "gateway", "--path", str(self.source_a),
+            ]))
+        scenario = {
+            "scenario_id": "SCN-TOOL-PREPARED",
+            "name": "工具准备场景",
+            "business_operation": "CREATE",
+            "business_goal": "验证 Agent 无需创建场景文件",
+            "trigger": {"kind": "METHOD", "symbol": "Gateway#create", "input_type": "Request"},
+            "scope": {"source_ids": ["gateway"], "environment": "prod"},
+            "expected_outcome": "场景已登记",
+        }
+        prior_stdin = sys.stdin
+        try:
+            sys.stdin = io.StringIO(json.dumps(scenario, ensure_ascii=False))
+            with redirect_stdout(io.StringIO()):
+                result = cli_main(["--workspace", str(workspace_root), "scenario-put"])
+        finally:
+            sys.stdin = prior_stdin
+        self.assertEqual(0, result)
+        store = FactStore(workspace_root / "ucef.db")
+        try:
+            self.assertTrue(store.has("scenarios", "SCN-TOOL-PREPARED"))
+        finally:
+            store.close()
 
     def test_cli_registers_redacted_json_artifact_and_builds_independent_page(self):
         source = self.workspace_root / "payment-prod.json"

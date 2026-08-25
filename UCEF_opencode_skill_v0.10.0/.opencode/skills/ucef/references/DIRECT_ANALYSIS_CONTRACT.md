@@ -45,9 +45,15 @@ Finalizer 只能读取压缩后的 BusinessBlock，不读源码、配置、方�
 
 模型任务包含 Planner 和 Finalizer。Runtime 到期后把未执行任务标记为 `SKIPPED`，保留当前页面，不做自动重试。校验失败允许当前 Worker纠正一次提交，但不得新建分析层或子任务。
 
+## 自描述任务胶囊
+
+`analysis-next` 优先返回尚未完成的 `CLAIMED` 任务，确保校验失败后不会越过当前任务。每个胶囊携带角色专用 `output_contract`：提交工具名、必填字段、硬数量限制和最小 `payload_template`。运行时已填入 Block 身份及 Overview 的完整 block ID 顺序，并自动注入 run、scenario 和可生成的产物 ID。
+
+Worker 不读取 Python/TypeScript 脚本、完整 Schema、示例 JSON 或本合同来学习调用方式。结构错误返回 `code + JSON path + expected + hint`，不返回整个 payload。初次失败后只允许一次定向修正；再次失败时 Block 标为 `FAILED` 并生成可见 Gap，Planner 或 Finalizer 失败则以 `SUBMISSION_CORRECTION_BUDGET_EXHAUSTED` 停止运行。
+
 ## 单写入与幂等
 
-模型没有文件编辑或命令权限。所有正式产物经 `.opencode/tools/ucef.ts` 调用 Runtime：校验任务归属、字段、数量、状态和覆盖范围后，在同一事务中入库并生成 receipt。同一 payload 重复提交返回 `ALREADY_ACCEPTED`，不会重复写入或触发任务。
+模型没有文件编辑或命令权限。所有正式产物经 `.opencode/tools/ucef.ts` 调用 Runtime：校验任务归属、字段、数量、状态和覆盖范围后，在同一事务中入库并生成 receipt。同一 payload 重复提交返回 `ALREADY_ACCEPTED`，不会重复写入或触发任务。工作区初始化、数据源、Scenario、配置制品和站点构建也由专用工具封装，CLI 只作为人工运维入口。
 
 ## 复用
 
