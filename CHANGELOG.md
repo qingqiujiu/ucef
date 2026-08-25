@@ -3,15 +3,16 @@
 ## v0.10.0 — 三层直接产物与硬预算调度
 
 - UTF-8 修正版强制 Bun/Python 工具边界使用 UTF-8，确保直接提交中的中文与 emoji 不受 Windows 代码页影响，并兼容带 BOM 的 UTF-8 JSON。
-- 展示层升级为工程审计台：业务链路导航、确定性 SVG 时序图和按业务块联动的证据抽屉，图形由 Runtime 根据已提交事实生成，不增加模型输出负担。
+- 展示层升级为中文业务执行档案：业务主线与确定性 SVG 时序图默认可见，技术依据改为点击后打开的模态侧栏，输入、判断、输出和步骤以中文标签的结构化视图展示，不再在主页面倾倒 JSON。
 - 新增内容寻址的原始 JSON 制品库；配置快照自动脱敏并独立展示、搜索和下载，Scenario 与 Agent 上下文只保留 `artifact_id + JSON Pointer` 引用。
 - 任务胶囊增加角色专用最小输出合同；初始化、数据源、Scenario、制品和站点全部工具化，Agent 不再阅读脚本或完整 Schema。提交错误返回精确路径并硬限制一次修正，避免校验循环。
 - 默认分析只产生 `ScenarioPlan`、`BusinessBlock[]`、`ScenarioOverview`，移除 Skeleton → Slice → Integration 的结果搬运链。
-- 新增确定性 Runtime 队列；QUICK/STANDARD/DEEP 分别硬限制业务块、深挖块、模型任务、单 Worker 上下文和 15/30/45 分钟截止时间。
+- 新增确定性 Runtime 队列；QUICK/STANDARD/DEEP 分别限制为 5/7/10 个业务块、1/2/4 个深挖块、3/4/6 次模型任务和 10/20/35 分钟截止时间。
+- 达到时间上限后的下一次启动直接复用已存 Plan 和完成块，只调度未完成块与 Finalizer；不再重新派发 Planner 或重复提交已完成块。
 - 子 Agent 通过 OpenCode 项目级自定义工具直接提交最终 JSON；Runtime 校验角色、结构、数量和覆盖，在同一事务中入库并返回幂等 receipt。
 - 父 Agent 只负责启动、取任务、派发固定角色和接收 receipt，不读取、拼接、修复或重写子 Agent 正文。
 - Planner 自动获得最多 30 条历史业务块 logical_key 索引，Block Worker 只获得同键最多 3 个紧凑候选，并必须记录精确复用、部分复用或新挖及依据，避免重读完整旧报告。
-- Planner、Block、Finalizer 分别限制为 8、12、5 steps；全部禁止编辑、命令执行和递归委派。Finalizer 禁止回读源码、配置和数据库。
+- 主 Agent、Planner、Block、Finalizer 分别限制为 20、6、9、4 steps；全部禁止编辑、命令执行和递归委派。Finalizer 禁止回读源码、配置和数据库。
 - 将重点判定固化为配置选路、P0 字段变化、外部/持久化边界、异常事务时序和最终结果；透明框架与普通透传只保留证据，不继续展开。
 - Plan 提交后立即生成业务骨架，Block 每提交一个就增量更新 HTML；默认视图按业务块展开实现，方法和源码移到折叠技术附录。
 - 直接模式可读性由三类最终产物确定，不再运行旧版审计触发扩张；达到时间或任务上限后发布已有内容与显式 Gap。

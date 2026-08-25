@@ -39,7 +39,7 @@ class OpenCodeAgentPackagingTests(unittest.TestCase):
         self.assertIn("mode: primary", frontmatter)
         self.assertIn("permission:", frontmatter)
         self.assertIn('"*": deny', frontmatter)
-        self.assertIn("steps: 30", frontmatter)
+        self.assertIn("steps: 20", frontmatter)
         self.assertIn('"ucef_control_*": allow', frontmatter)
         self.assertIn('"ucef_workspace_*": allow', frontmatter)
         self.assertIn('"ucef_scenario_*": allow', frontmatter)
@@ -405,6 +405,7 @@ class DirectAnalysisTests(unittest.TestCase):
         planner = planner_context["task"]
         planner_contract = planner_context["output_contract"]
         self.assertEqual("ucef_submit_plan", planner_contract["submit_tool"])
+        self.assertEqual("zh-CN", planner_contract["presentation"]["language"])
         self.assertIn("business_blocks", planner_contract["payload_template"])
         self.assertLess(len(json.dumps(planner_contract, ensure_ascii=False)), 5000)
         plan = self.plan_payload(run_id)
@@ -414,7 +415,7 @@ class DirectAnalysisTests(unittest.TestCase):
 
         status = self.service.status(run_id)
         self.assertLessEqual(len(status["tasks"]), MODE_BUDGETS["STANDARD"]["max_model_tasks"])
-        self.assertEqual(3, len([task for task in status["tasks"] if task["role"] == "BLOCK"]))
+        self.assertEqual(2, len([task for task in status["tasks"] if task["role"] == "BLOCK"]))
 
         while True:
             claimed = self.service.next_task(run_id)
@@ -471,8 +472,9 @@ class DirectAnalysisTests(unittest.TestCase):
         site_result = DossierSiteBuilder(self.store, {"site": {"output": "site"}}, self.root).build()
         self.assertEqual(1, site_result["artifacts"])
         page = (self.root / "site" / "scenarios" / "SCN-DEMO-PREPAID.html").read_text(encoding="utf-8")
-        for expected in ("请求按生产配置选择预付通道", "业务执行过程", "业务时序图", "业务链路导航", "Evidence drawer", "字段如何走完整条链", "外部系统与业务副作用", "技术证据附录", "读取并转换金额", artifact["artifact_id"]):
+        for expected in ("请求按生产配置选择预付通道", "业务执行过程", "业务时序图", "业务主线", "查看技术依据", "字段如何走完整条链", "外部系统与业务副作用", "技术证据附录", "读取并转换金额", artifact["artifact_id"]):
             self.assertIn(expected, page)
+        self.assertNotIn("Evidence drawer", page)
         self.assertIn('class="sequence-step"', page)
         artifact_page = (self.root / "site" / "artifacts" / f"{artifact['artifact_id']}.html").read_text(encoding="utf-8")
         self.assertIn("原始制品", artifact_page)
@@ -481,7 +483,8 @@ class DirectAnalysisTests(unittest.TestCase):
         self.assertNotIn("</SCRIPT><script>", artifact_page)
         self.assertIn("\\u003c/SCRIPT>", artifact_page)
         index = (self.root / "site" / "index.html").read_text(encoding="utf-8")
-        self.assertIn("READABLE_COMPLETE", index)
+        self.assertIn("可完整阅读", index)
+        self.assertIn("UCEF 业务执行档案", index)
 
         second = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
         second_run = second["run"]["run_id"]
@@ -544,6 +547,92 @@ class DirectAnalysisTests(unittest.TestCase):
         next_block = self.service.next_task(run_id)["context"]["task"]
         self.assertEqual("BLOCK", next_block["role"])
         self.assertNotEqual(block["task_id"], next_block["task_id"])
+
+    def test_stopped_run_continues_persisted_plan_without_another_planner(self):
+        started = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
+        run_id = started["run"]["run_id"]
+        planner = self.service.next_task(run_id)["context"]["task"]
+        self.service.submit("plan", run_id, planner["task_id"], self.plan_payload(run_id))
+        first_block = self.service.next_task(run_id)["context"]["task"]
+        self.service.submit("block", run_id, first_block["task_id"], self.block_payload(first_block, run_id))
+        stale = self.store.get("business_blocks", first_block["block_id"])
+        stale.update({"block_id": "BLOCK-STALE-HISTORY", "logical_key": "demo.stale", "sequence_no": 99})
+        self.store.upsert("business_blocks", stale, "TEST-STALE-HISTORY")
+        self.store.commit()
+
+        run = self.service.status(run_id)["run"]
+        run["deadline_at"] = "2000-01-01T00:00:00+00:00"
+        self.store.conn.execute(
+            "UPDATE analysis_runs SET deadline_at=?,payload_json=? WHERE run_id=?",
+            (run["deadline_at"], json.dumps(run, ensure_ascii=False), run_id),
+        )
+        self.store.commit()
+        self.assertEqual("STOPPED", self.service.status(run_id)["run"]["status"])
+
+        continued = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
+        self.assertEqual("CONTINUED", continued["status"])
+        self.assertEqual(run_id, continued["continued_from_run_id"])
+        self.assertEqual([first_block["block_id"]], continued["reused_completed_block_ids"])
+        continued_status = self.service.status(continued["run"]["run_id"])
+        self.assertNotIn("PLANNER", {task["role"] for task in continued_status["tasks"]})
+        self.assertEqual({"BLOCK", "FINALIZER"}, {task["role"] for task in continued_status["tasks"]})
+        self.assertEqual(1, len(self.store.list_collection("scenario_plans", "SCN-DEMO-PREPAID")))
+
+        continued_run_id = continued["run"]["run_id"]
+        remaining = self.service.next_task(continued_run_id)["context"]["task"]
+        self.service.submit("block", continued_run_id, remaining["task_id"], self.block_payload(remaining, continued_run_id))
+        finalizer = self.service.next_task(continued_run_id)["context"]
+        self.assertEqual("FINALIZER", finalizer["task"]["role"])
+        ordered_ids = finalizer["output_contract"]["payload_template"]["ordered_block_ids"]
+        self.assertEqual([f"BLOCK-DIRECT-{index}" for index in range(1, 6)], ordered_ids)
+        self.assertNotIn("BLOCK-STALE-HISTORY", ordered_ids)
+        self.service.submit("overview", continued_run_id, finalizer["task"]["task_id"], {
+            "overview_id": "OVERVIEW-CONTINUED",
+            "one_sentence": "恢复未完成业务块后形成完整链路。",
+            "business_context": "验证超时恢复不会重新规划。",
+            "selected_route": {},
+            "ordered_block_ids": ordered_ids,
+            "key_field_journeys": [],
+            "external_effects": [],
+            "persistence_effects": [],
+            "failure_outcomes": [],
+            "open_gaps": [],
+        })
+        self.assertEqual("COMPLETE", self.service.status(continued_run_id)["run"]["status"])
+        DossierSiteBuilder(self.store, {"site": {"output": "site"}}, self.root).build()
+        page = (self.root / "site" / "scenarios" / "SCN-DEMO-PREPAID.html").read_text(encoding="utf-8")
+        self.assertNotIn("BLOCK-STALE-HISTORY", page)
+        fresh = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
+        self.assertEqual("STARTED", fresh["status"])
+        self.assertEqual("PLANNER", self.service.next_task(fresh["run"]["run_id"])["context"]["task"]["role"])
+
+    def test_direct_site_tolerates_string_steps_and_hides_technical_panel_by_default(self):
+        started = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
+        run_id = started["run"]["run_id"]
+        planner = self.service.next_task(run_id)["context"]["task"]
+        self.service.submit("plan", run_id, planner["task_id"], self.plan_payload(run_id))
+        block = self.store.get("business_blocks", "BLOCK-DIRECT-2")
+        block.update({
+            "implementation_steps": ["读取扩展配置", {"action": "选择清算规则", "fields": ["cstcType"]}],
+            "inputs": [{"name": "stepModel.ext", "business_use": "选择清算规则"}],
+            "decision": {"condition": "ext != null", "selected": "清算扩展点"},
+            "external_calls": ["调用清算扩展点"],
+            "persistence": ["记录清算状态"],
+            "method_evidence": ["ClearingNoticeTask.java:42 execTask"],
+            "status": "COMPLETE",
+        })
+        self.store.upsert("business_blocks", block, "TEST-LEGACY-STRING")
+        self.store.commit()
+        DossierSiteBuilder(self.store, {"site": {"output": "site"}}, self.root).build()
+        page = (self.root / "site" / "scenarios" / "SCN-DEMO-PREPAID.html").read_text(encoding="utf-8")
+        self.assertIn("读取扩展配置", page)
+        self.assertIn("<dt>名称</dt>", page)
+        self.assertIn("查看技术依据", page)
+        self.assertIn('class="evidence-dialog"', page)
+        self.assertNotIn('class="evidence-drawer"', page)
+        self.assertNotIn("Evidence drawer", page)
+        self.assertNotIn("Scenario control room", page)
+        self.assertNotIn("{&quot;name&quot;", page)
 
     def test_submit_block_process_boundary_forces_utf8_under_legacy_windows_codepage(self):
         (self.root / "workspace.json").write_text(

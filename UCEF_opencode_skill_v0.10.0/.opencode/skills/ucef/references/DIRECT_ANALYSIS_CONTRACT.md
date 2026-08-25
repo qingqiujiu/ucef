@@ -21,15 +21,15 @@ Runtime 在计划落库时立即写入所有块的骨架，所以此时 HTML 已
 - `business_goal`、`why_current`；
 - 收到的业务数据及来源；
 - 当前配置/条件/路由判断；
-- 最多 10 个读者相关的实现步骤；
+- 最多 7 个读者相关的实现步骤；
 - 字段的 `from → transformation → to → business_use`；
 - 外部请求来源、响应去向、失败行为；
 - 落库字段映射与业务效果；
 - 输出如何交给下一块；
-- 最多 8 个方法/源码证据或透明技术桥；
+- 最多 6 个方法/源码证据或透明技术桥；
 - 无法确认的显式 Gap。
 
-Worker 先检查 Runtime 按 logical_key 给出的最多 3 个紧凑候选，并在 `reuse` 中记录 `EXACT_REUSE`、`PARTIAL_REUSE` 或 `NEW` 及其代码/绑定/配置/契约依据。最多 6 次定向语义检索，不遍历整个调用图。`padb` 只用于当前块确实依赖生产配置或数据库映射时。提交成功后只返回 receipt。
+Worker 先检查 Runtime 按 logical_key 给出的最多 3 个紧凑候选，并在 `reuse` 中记录 `EXACT_REUSE`、`PARTIAL_REUSE` 或 `NEW` 及其代码/绑定/配置/契约依据。最多 4 次定向语义检索，不遍历整个调用图。`padb` 只用于当前块确实依赖生产配置或数据库映射时。提交成功后只返回 receipt。
 
 ## 3. ScenarioOverview
 
@@ -39,11 +39,11 @@ Finalizer 只能读取压缩后的 BusinessBlock，不读源码、配置、方�
 
 | 模式 | 业务块 | 深挖块 | 模型任务 | 时间 | 单 Worker 上下文 |
 |---|---:|---:|---:|---:|---:|
-| QUICK | 5 | 2 | 4 | 15 分钟 | 10K |
-| STANDARD | 8 | 4 | 6 | 30 分钟 | 12K |
-| DEEP | 12 | 6 | 8 | 45 分钟 | 16K |
+| QUICK | 5 | 1 | 3 | 10 分钟 | 8K |
+| STANDARD | 7 | 2 | 4 | 20 分钟 | 10K |
+| DEEP | 10 | 4 | 6 | 35 分钟 | 12K |
 
-模型任务包含 Planner 和 Finalizer。Runtime 到期后把未执行任务标记为 `SKIPPED`，保留当前页面，不做自动重试。校验失败允许当前 Worker纠正一次提交，但不得新建分析层或子任务。
+模型任务包含 Planner 和 Finalizer。Runtime 到期后把未执行任务标记为 `SKIPPED`，保留当前页面，不做自动重试。之后再次启动同一 Scenario 时，新运行复用已持久化的 Plan 和完成块，只为未完成块与 Finalizer 建立任务；若恢复轮仍装不下全部缺口，超出的块转为可见 Gap，不再次规划。校验失败允许当前 Worker 纠正一次提交，但不得新建分析层或子任务。
 
 ## 自描述任务胶囊
 

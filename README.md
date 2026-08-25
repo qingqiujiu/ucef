@@ -20,7 +20,7 @@ UCEF（Unified Code Excavation Framework）是面向大型 Java 系统的业务�
 - [发布压缩包](UCEF_opencode_skill_v0.10.0_release.zip)
 - [测试状态](UCEF_opencode_skill_v0.10.0/TEST_STATUS.md)
 
-v0.10.0 将默认流程压缩为 ScenarioPlan、BusinessBlock、ScenarioOverview 三类最终产物。STANDARD 最多 6 次模型任务和 30 分钟；子 Agent 直接校验入库，父 Agent 只接收 receipt，不再多层搬运与重写。任务胶囊自带角色专用最小输出模板，工作区、数据源、Scenario、配置制品和站点均有专用工具，Agent 不再阅读脚本或凭记忆拼提交结构。HTML 提供业务导航、确定性 SVG 时序图和证据抽屉；原始配置以脱敏 JSON 制品独立展示，Scenario 与 Agent 上下文只保存引用。
+v0.10.0 将默认流程压缩为 ScenarioPlan、BusinessBlock、ScenarioOverview 三类最终产物。STANDARD 最多 7 个业务块、2 个深挖块、4 次模型任务和 20 分钟；子 Agent 直接校验入库，父 Agent 只接收 receipt，不再多层搬运与重写。超时续跑会复用已存 Plan 和完成块，只补未完成块，不再重新派发 Planner。任务胶囊自带中文、结构化的最小输出模板，Agent 不再阅读脚本或凭记忆拼提交结构。HTML 默认只显示中文业务结论与确定性 SVG 时序图，技术依据点击后打开；原始配置以脱敏 JSON 制品独立展示，Scenario 与 Agent 上下文只保存引用。
 
 ## OpenCode 集成
 
@@ -41,4 +41,4 @@ Java 项目始终是只读数据源。UCEF 的数据库、Work Unit、上下文�
 
 ## 验证
 
-v0.10.0 已通过 27 项运行时、自描述任务合同、单次修正限制、硬预算、UTF-8 进程边界、直接提交、幂等回执、工作区、旧数据兼容、制品脱敏、方法树、字段谱系、OpenCode Agent 和 HTML 回归测试；发布包另做解压回归。运行时仅依赖 Python 3.10+ 标准库。
+v0.10.0 已通过 29 项运行时、自描述任务合同、单次修正限制、硬预算、超时续跑、UTF-8 进程边界、直接提交、幂等回执、工作区、旧数据兼容、制品脱敏、方法树、字段谱系、OpenCode Agent 和 HTML 回归测试；发布包另做解压回归。运行时仅依赖 Python 3.10+ 标准库。

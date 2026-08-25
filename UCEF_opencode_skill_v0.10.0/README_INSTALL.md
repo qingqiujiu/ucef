@@ -36,14 +36,14 @@ python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis 
 python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis scenario-put --file scenarios/pay.json
 ```
 
-随后在 OpenCode 选择 `ucef-java-chain`，提供工作区绝对路径和 scenario ID。默认 STANDARD 的硬上限是 6 次模型任务、30 分钟；DEEP 必须由用户明确选择。
+随后在 OpenCode 选择 `ucef-java-chain`，提供工作区绝对路径和 scenario ID。默认 STANDARD 的硬上限是 7 个业务块、2 个深挖块、4 次模型任务和 20 分钟；DEEP 必须由用户明确选择。
 
 ## Agent 与工具职责
 
 - `ucef-java-chain`：只启动、取下一任务、派发固定角色并接 receipt；不能转写结果或自行增加任务。
-- `ucef-planner`：8 steps，建立一次业务骨架。
-- `ucef-block`：12 steps，最多 6 次定向检索，完成一个可直接展示的业务块。
-- `ucef-finalizer`：5 steps，只读压缩后的业务块，形成一次全局总览。
+- `ucef-planner`：6 steps，建立一次业务骨架。
+- `ucef-block`：9 steps，最多 4 次定向检索，完成一个可直接展示的业务块。
+- `ucef-finalizer`：4 steps，只读压缩后的业务块，形成一次全局总览。
 - `.opencode/tools/ucef.ts`：封装工作区、数据源、Scenario、制品、站点和提交命令；把最终 JSON 交给 Runtime 校验、事务入库、幂等回执和增量 HTML。
 
 每个 `ucef_control_next` 任务胶囊自带角色专用 `output_contract.payload_template`。Agent 只填写该模板，不读取脚本、完整 Schema 或示例 JSON；run、scenario 和可生成的产物 ID 由 Runtime 注入。结构错误只返回精确字段路径，并且最多允许一次修正。详细合同仅供 Runtime 开发和人工诊断查看。
@@ -70,14 +70,25 @@ python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis 
 
 OpenCode 工具启动 Python 时会强制 stdin、stdout 和 stderr 使用 UTF-8；`ucef_submit_plan`、`ucef_submit_block`、`ucef_submit_gap`、`ucef_submit_overview` 因而不再受 Windows GBK/ANSI 代码页影响。工作区和制品 JSON 接受 UTF-8 及带 BOM 的 UTF-8；GBK/ANSI 文件仍应先明确转换，避免静默乱码。
 
-如果已经安装紧邻本修正版的 v0.10.0，只需覆盖以下四个运行文件，然后重新加载 OpenCode 项目：
+从任意旧的 v0.10.0 替换到当前版本，推荐直接用发布 ZIP 中的整个 `.opencode/` 覆盖旧目录，然后重新加载 OpenCode 项目。这样可以同时取得中文展示、按需技术依据、超时续跑、紧缩预算、任务提示和 UTF-8 修复。
+
+如果你已经装过 UTF-8 修正版，只想最小覆盖本次“可读性与防重复”优化，替换以下文件：
+
+- `.opencode/agents/ucef-java-chain.md`
+- `.opencode/agents/ucef-planner.md`
+- `.opencode/agents/ucef-block.md`
+- `.opencode/agents/ucef-finalizer.md`
+- `.opencode/skills/ucef/runtime/ucef/direct.py`
+- `.opencode/skills/ucef/runtime/ucef/site.py`
+
+若当前安装还没有 UTF-8 修复，再额外替换：
 
 - `.opencode/tools/ucef.ts`
 - `.opencode/skills/ucef/runtime/ucef/cli.py`
 - `.opencode/skills/ucef/runtime/ucef/core.py`
 - `.opencode/skills/ucef/runtime/ucef/artifacts.py`
 
-如果使用的是更早的 v0.10.0 包，建议直接用发布 ZIP 中的整个 `.opencode/` 覆盖旧目录，以同时取得任务合同、角色权限和 UTF-8 修复。覆盖前先保留你自行修改过的 Agent、MCP 名称或环境配置。
+覆盖前先保留你自行修改过的 Agent、MCP 名称或环境配置。已有 UCEF 分析工作区和数据库无需删除；新 Runtime 会继续读取原数据，包含字符串步骤的旧业务块也可以直接生成站点。
 
 ## 原始配置制品与可视化站点
 
@@ -88,4 +99,4 @@ python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis 
 python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis artifact-list --scenario SCN-PAY
 ```
 
-`password`、`secret`、`token`、访问密钥等常见敏感键默认脱敏；额外键可重复使用 `--redact-key` 指定。站点主场景页提供业务链路导航、由已提交事实确定性生成的 SVG 时序图和证据抽屉。原始制品在 `site/artifacts/` 下独立加载，不进入模型上下文或 Scenario HTML。
+`password`、`secret`、`token`、访问密钥等常见敏感键默认脱敏；额外键可重复使用 `--redact-key` 指定。站点主场景页默认展示中文业务主线和由已提交事实确定性生成的 SVG 时序图；技术依据只有点击按钮后才打开，结构化业务字段不再以原始 JSON 显示。原始制品在 `site/artifacts/` 下独立加载，不进入模型上下文或 Scenario HTML。

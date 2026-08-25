@@ -11,24 +11,24 @@ from .store import FactStore
 MODE_BUDGETS = {
     "QUICK": {
         "max_business_blocks": 5,
-        "max_detail_blocks": 2,
-        "max_model_tasks": 4,
-        "max_elapsed_minutes": 15,
-        "max_context_tokens_per_worker": 10000,
+        "max_detail_blocks": 1,
+        "max_model_tasks": 3,
+        "max_elapsed_minutes": 10,
+        "max_context_tokens_per_worker": 8000,
     },
     "STANDARD": {
-        "max_business_blocks": 8,
-        "max_detail_blocks": 4,
-        "max_model_tasks": 6,
-        "max_elapsed_minutes": 30,
-        "max_context_tokens_per_worker": 12000,
+        "max_business_blocks": 7,
+        "max_detail_blocks": 2,
+        "max_model_tasks": 4,
+        "max_elapsed_minutes": 20,
+        "max_context_tokens_per_worker": 10000,
     },
     "DEEP": {
-        "max_business_blocks": 12,
-        "max_detail_blocks": 6,
-        "max_model_tasks": 8,
-        "max_elapsed_minutes": 45,
-        "max_context_tokens_per_worker": 16000,
+        "max_business_blocks": 10,
+        "max_detail_blocks": 4,
+        "max_model_tasks": 6,
+        "max_elapsed_minutes": 35,
+        "max_context_tokens_per_worker": 12000,
     },
 }
 
@@ -134,6 +134,129 @@ class DirectAnalysisService:
             (run["status"], json.dumps(run, ensure_ascii=False), canonical_hash(run), ts, run["run_id"]),
         )
 
+    def _insert_run(self, run: dict[str, Any]) -> None:
+        ts = now_iso()
+        self.store.conn.execute(
+            "INSERT INTO analysis_runs(run_id,scenario_id,mode,status,started_at,deadline_at,payload_json,content_hash,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (
+                run["run_id"], run["scenario_id"], run["mode"], run["status"],
+                run["started_at"], run["deadline_at"], json.dumps(run, ensure_ascii=False),
+                canonical_hash(run), ts, ts,
+            ),
+        )
+
+    def _continuation_plan(self, previous: dict[str, Any]) -> dict[str, Any] | None:
+        plan_id = previous.get("plan_id")
+        if plan_id:
+            plan = self.store.get("scenario_plans", str(plan_id))
+            if plan:
+                return plan
+        row = self.store.conn.execute(
+            "SELECT payload_json FROM scenario_plans WHERE scenario_id=? AND run_id=? AND status='COMPLETE' "
+            "ORDER BY updated_at DESC LIMIT 1",
+            (previous["scenario_id"], previous["run_id"]),
+        ).fetchone()
+        return json.loads(row["payload_json"]) if row else None
+
+    def _continue_stopped_run(
+        self,
+        previous: dict[str, Any],
+        mode: str,
+    ) -> dict[str, Any] | None:
+        if previous.get("stop_reason") != "HARD_TIME_BUDGET_REACHED":
+            return None
+        plan = self._continuation_plan(previous)
+        if not plan:
+            return None
+        selected_ids = [str(value) for value in plan.get("selected_detail_block_ids") or []]
+        missing_ids = []
+        for block_id in selected_ids:
+            block = self.store.get("business_blocks", block_id)
+            if not block or block.get("status") not in {"COMPLETE", "SUMMARY_COMPLETE", "GAP"}:
+                missing_ids.append(block_id)
+
+        started = datetime.now(timezone.utc)
+        budget = dict(MODE_BUDGETS[mode])
+        task_capacity = max(0, budget["max_model_tasks"] - 1)
+        scheduled_ids = missing_ids[:task_capacity]
+        deferred_ids = missing_ids[task_capacity:]
+        run = {
+            "run_id": new_id("RUN"),
+            "scenario_id": previous["scenario_id"],
+            "mode": mode,
+            "status": "EXTRACTING" if scheduled_ids else "FINALIZING",
+            "started_at": started.isoformat(),
+            "deadline_at": (started + timedelta(minutes=budget["max_elapsed_minutes"])).isoformat(),
+            "budget": budget,
+            "continued_from_run_id": previous["run_id"],
+            "continuation_root_run_id": previous.get("continuation_root_run_id") or previous["run_id"],
+            "continuation_no": int(previous.get("continuation_no") or 0) + 1,
+            "plan_id": plan["plan_id"],
+            "reused_completed_block_ids": [value for value in selected_ids if value not in missing_ids],
+            "scheduled_block_ids": scheduled_ids,
+            "deferred_block_ids": deferred_ids,
+            "dispatch_policy": "continue the persisted plan; never dispatch another planner; only fill unfinished blocks and final overview",
+        }
+        self._insert_run(run)
+        for sequence, block_id in enumerate(scheduled_ids, start=1):
+            self._insert_task({
+                "task_id": new_id("TASK"),
+                "run_id": run["run_id"],
+                "scenario_id": run["scenario_id"],
+                "role": "BLOCK",
+                "block_id": block_id,
+                "plan_id": plan["plan_id"],
+                "sequence_no": sequence,
+                "status": "PENDING",
+                "budget": {
+                    "max_semantic_probes": 4,
+                    "max_method_evidence": 6,
+                    "context_tokens": budget["max_context_tokens_per_worker"],
+                    "max_followups": 0,
+                },
+                "acceptance": "Complete only this unfinished block from the persisted plan",
+            })
+        for block_id in deferred_ids:
+            block = self.store.get("business_blocks", block_id)
+            if block:
+                block["status"] = "GAP"
+                block["why_current"] = str(block.get("why_current") or "") + "；本轮恢复预算未继续深挖。"
+                self.store.upsert("business_blocks", block, "RUNTIME-CONTINUATION-BUDGET")
+            self.store.upsert("gaps", {
+                "gap_id": new_id("GAP"),
+                "scenario_id": run["scenario_id"],
+                "run_id": run["run_id"],
+                "category": "CONTINUATION_BUDGET",
+                "severity": "LOW",
+                "question": f"业务块 {block_id} 未在恢复轮的硬预算内继续深挖。",
+                "status": "OPEN",
+                "auto_generated": True,
+            }, "RUNTIME-CONTINUATION-BUDGET")
+        finalizer = {
+            "task_id": new_id("TASK"),
+            "run_id": run["run_id"],
+            "scenario_id": run["scenario_id"],
+            "role": "FINALIZER",
+            "plan_id": plan["plan_id"],
+            "sequence_no": 99,
+            "status": "WAITING" if scheduled_ids else "PENDING",
+            "budget": {"context_tokens": 6000, "max_source_reads": 0},
+            "acceptance": "Summarize persisted blocks after a continuation; do not reread source code",
+        }
+        self._insert_task(finalizer)
+        self.store.commit()
+        return {
+            "status": "CONTINUED",
+            "run": run,
+            "continued_from_run_id": previous["run_id"],
+            "reused_completed_block_ids": run["reused_completed_block_ids"],
+            "scheduled_block_ids": scheduled_ids,
+            "first_task_id": (self.store.conn.execute(
+                "SELECT task_id FROM analysis_tasks WHERE run_id=? AND status='PENDING' ORDER BY sequence_no LIMIT 1",
+                (run["run_id"],),
+            ).fetchone() or {"task_id": None})["task_id"],
+        }
+
     def _known_block_index(self) -> list[dict[str, Any]]:
         rows = self.store.conn.execute(
             "SELECT payload_json FROM business_blocks WHERE status IN ('COMPLETE','SUMMARY_COMPLETE') ORDER BY updated_at DESC"
@@ -238,7 +361,18 @@ class DirectAnalysisService:
             (scenario_id,),
         ).fetchone()
         if active:
-            return {"status": "EXISTING", "run": json.loads(active["payload_json"])}
+            active_run = self._run(json.loads(active["payload_json"])["run_id"])
+            if active_run.get("status") not in {"COMPLETE", "STOPPED"}:
+                return {"status": "EXISTING", "run": active_run}
+        latest_row = self.store.conn.execute(
+            "SELECT payload_json FROM analysis_runs WHERE scenario_id=? ORDER BY created_at DESC LIMIT 1",
+            (scenario_id,),
+        ).fetchone()
+        if latest_row:
+            latest_run = json.loads(latest_row["payload_json"])
+            continued = self._continue_stopped_run(latest_run, mode) if latest_run.get("status") == "STOPPED" else None
+            if continued:
+                return continued
         started = datetime.now(timezone.utc)
         budget = dict(MODE_BUDGETS[mode])
         run = {
@@ -251,14 +385,7 @@ class DirectAnalysisService:
             "budget": budget,
             "dispatch_policy": "one planner, bounded block workers, one finalizer; no recursive task creation",
         }
-        ts = now_iso()
-        self.store.conn.execute(
-            "INSERT INTO analysis_runs(run_id,scenario_id,mode,status,started_at,deadline_at,payload_json,content_hash,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (
-                run["run_id"], scenario_id, mode, run["status"], run["started_at"], run["deadline_at"],
-                json.dumps(run, ensure_ascii=False), canonical_hash(run), ts, ts,
-            ),
-        )
+        self._insert_run(run)
         task = {
             "task_id": new_id("TASK"),
             "run_id": run["run_id"],
@@ -297,13 +424,18 @@ class DirectAnalysisService:
         common = {
             "contract_version": "1",
             "runtime_injects": ["scenario_id", "run_id", "generated artifact id"],
+            "presentation": {
+                "language": "zh-CN",
+                "rule": "所有面向读者的标题、目的、原因、步骤和结果使用简体中文；类名、方法名、字段名、枚举和配置键保持源码原文。",
+                "format": "填写结构化字段，不要在文本中嵌入 JSON、Markdown 表格或 HTML。",
+            },
             "correction_policy": {
                 "max_attempts": MAX_SUBMISSION_ATTEMPTS,
                 "corrections_remaining": int(
                     task.get("corrections_remaining", MAX_SUBMISSION_ATTEMPTS - 1)
                 ),
             },
-            "instruction": "Fill this template and call the named submit tool once. Do not read scripts, schemas, or example files.",
+            "instruction": "按模板一次性填写并调用指定提交工具。面向读者的说明使用简体中文；不要读取脚本、Schema 或示例文件。",
         }
         if role == "PLANNER":
             return {
@@ -315,16 +447,16 @@ class DirectAnalysisService:
                     "detail_blocks": run["budget"]["max_detail_blocks"],
                 },
                 "payload_template": {
-                    "critical_fields": ["<P0 field>"],
-                    "terminal_outcome": "<final business outcome>",
+                    "critical_fields": ["<关键业务字段名，保留源码原文>"],
+                    "terminal_outcome": "<最终业务结果，使用中文>",
                     "business_blocks": [{
                         "block_id": "BLOCK-<stable-id>",
                         "logical_key": "<stable.business.key>",
                         "sequence_no": 10,
-                        "title": "<reader-facing title>",
-                        "business_goal": "<why this block exists>",
+                        "title": "<中文业务标题>",
+                        "business_goal": "<这一块解决什么业务问题，使用中文>",
                         "depth": "SUMMARY|STANDARD|CRITICAL",
-                        "reason": "<why this depth is enough>",
+                        "reason": "<为什么需要或不需要深挖，使用中文>",
                         "inputs": [],
                         "decision": {},
                         "expected_output": {},
@@ -343,14 +475,14 @@ class DirectAnalysisService:
                     "field_changes", "external_calls", "persistence", "output",
                     "error_behavior", "method_evidence", "evidence_refs", "reuse", "status",
                 ],
-                "limits": {"implementation_steps": 10, "method_evidence": 8},
+                "limits": {"implementation_steps": 7, "method_evidence": 6},
                 "payload_template": {
                     "block_id": task["block_id"],
                     "logical_key": planned["logical_key"],
                     "sequence_no": planned["sequence_no"],
                     "title": planned["title"],
                     "business_goal": planned["business_goal"],
-                    "why_current": "<active configuration, request condition, or prior handoff>",
+                    "why_current": "<由什么配置、请求条件或上一步结果进入这里，使用中文>",
                     "inputs": [],
                     "decision": planned.get("decision") or {},
                     "implementation_steps": [],
@@ -361,7 +493,7 @@ class DirectAnalysisService:
                     "error_behavior": [],
                     "method_evidence": [],
                     "evidence_refs": planned.get("evidence_refs") or [],
-                    "reuse": {"decision": "NEW|EXACT_REUSE|PARTIAL_REUSE", "basis": "<evidence>"},
+                    "reuse": {"decision": "NEW|EXACT_REUSE|PARTIAL_REUSE", "basis": "<复用判断依据，使用中文>"},
                     "status": "COMPLETE|GAP",
                 },
             }
@@ -375,8 +507,8 @@ class DirectAnalysisService:
                 "failure_outcomes", "open_gaps",
             ],
             "payload_template": {
-                "one_sentence": "<one-sentence end-to-end outcome>",
-                "business_context": "<when and why this scenario runs>",
+                "one_sentence": "<一句中文说明完整链路和最终结果>",
+                "business_context": "<何时、为何触发本场景，使用中文>",
                 "selected_route": {},
                 "ordered_block_ids": block_ids,
                 "key_field_journeys": [],
@@ -484,6 +616,18 @@ class DirectAnalysisService:
                 str(planned.get("logical_key") or ""), run_id
             )
         elif task["role"] == "FINALIZER":
+            plan_id = task.get("plan_id") or run.get("plan_id")
+            plan = self.store.get("scenario_plans", str(plan_id)) if plan_id else None
+            planned_ids = [
+                str(item["block_id"])
+                for item in (plan or {}).get("business_blocks") or []
+                if item.get("block_id")
+            ]
+            if planned_ids:
+                current_blocks = [self.store.get("business_blocks", block_id) for block_id in planned_ids]
+                current_blocks = [block for block in current_blocks if block]
+            else:
+                current_blocks = self.store.list_collection("business_blocks", run["scenario_id"])
             context["business_blocks"] = [
                 {
                     key: block.get(key)
@@ -493,7 +637,7 @@ class DirectAnalysisService:
                         "error_behavior", "status",
                     )
                 }
-                for block in self.store.list_collection("business_blocks", run["scenario_id"])
+                for block in current_blocks
             ]
         context["output_contract"] = self._output_contract(run, task, context)
         return {"status": "TASK", "context": context}
@@ -689,8 +833,8 @@ class DirectAnalysisService:
                 "sequence_no": index,
                 "status": "PENDING",
                 "budget": {
-                    "max_semantic_probes": 6,
-                    "max_method_evidence": 8,
+                    "max_semantic_probes": 4,
+                    "max_method_evidence": 6,
                     "context_tokens": budget["max_context_tokens_per_worker"],
                     "max_followups": 0,
                 },
@@ -702,15 +846,17 @@ class DirectAnalysisService:
             "run_id": run["run_id"],
             "scenario_id": run["scenario_id"],
             "role": "FINALIZER",
+            "plan_id": payload["plan_id"],
             "sequence_no": 99,
             "status": "WAITING" if detail else "PENDING",
-            "budget": {"context_tokens": 8000, "max_source_reads": 0},
+            "budget": {"context_tokens": 6000, "max_source_reads": 0},
             "acceptance": "Write only the ScenarioOverview from stored BusinessBlocks",
         }
         self._insert_task(finalizer)
         task["status"] = "COMPLETE"
         self._update_task(task)
         run["status"] = "EXTRACTING" if detail else "FINALIZING"
+        run["plan_id"] = payload["plan_id"]
         self._update_run(run)
 
     def _submit_block(self, run: dict[str, Any], task: dict[str, Any], payload: dict[str, Any]) -> None:
@@ -737,16 +883,27 @@ class DirectAnalysisService:
                     code="TYPE_MISMATCH", path=f"$.{field}", expected="array; use [] when empty",
                     received=type(payload.get(field)).__name__,
                 )
-        if len(payload["method_evidence"]) > 8:
+        normalized_steps = []
+        for index, raw_step in enumerate(payload["implementation_steps"], start=1):
+            if isinstance(raw_step, dict):
+                step = dict(raw_step)
+                if not any(step.get(key) for key in ("name", "action", "processing", "description")):
+                    step["action"] = f"业务步骤 {index}"
+            else:
+                step = {"step": index, "action": str(raw_step)}
+            step.setdefault("step", index)
+            normalized_steps.append(step)
+        payload["implementation_steps"] = normalized_steps
+        if len(payload["method_evidence"]) > 6:
             _contract_error(
-                "BusinessBlock exceeds eight method-evidence references",
-                code="HARD_BUDGET_EXCEEDED", path="$.method_evidence", expected="at most 8 items",
+                "BusinessBlock exceeds six method-evidence references",
+                code="HARD_BUDGET_EXCEEDED", path="$.method_evidence", expected="at most 6 items",
                 received={"count": len(payload["method_evidence"])},
             )
-        if len(payload["implementation_steps"]) > 10:
+        if len(payload["implementation_steps"]) > 7:
             _contract_error(
-                "BusinessBlock exceeds ten reader-relevant implementation steps",
-                code="HARD_BUDGET_EXCEEDED", path="$.implementation_steps", expected="at most 10 items",
+                "BusinessBlock exceeds seven reader-relevant implementation steps",
+                code="HARD_BUDGET_EXCEEDED", path="$.implementation_steps", expected="at most 7 items",
                 received={"count": len(payload["implementation_steps"])},
             )
         if not str(payload.get("business_goal") or "").strip() or not str(payload.get("why_current") or "").strip():
@@ -797,14 +954,23 @@ class DirectAnalysisService:
                 code="MISSING_REQUIRED_FIELDS", path="$", expected="all required ScenarioOverview fields",
                 received={"missing": missing},
             )
-        valid_ids = {
-            block["block_id"] for block in self.store.list_collection("business_blocks", run["scenario_id"])
-        }
-        if not isinstance(payload["ordered_block_ids"], list) or set(payload["ordered_block_ids"]) != valid_ids:
+        plan_id = task.get("plan_id") or run.get("plan_id")
+        plan = self.store.get("scenario_plans", str(plan_id)) if plan_id else None
+        valid_ids = [
+            str(block["block_id"])
+            for block in (plan or {}).get("business_blocks") or []
+            if block.get("block_id")
+        ]
+        if not valid_ids:
+            valid_ids = [
+                str(block["block_id"])
+                for block in self.store.list_collection("business_blocks", run["scenario_id"])
+            ]
+        if not isinstance(payload["ordered_block_ids"], list) or payload["ordered_block_ids"] != valid_ids:
             _contract_error(
                 "ScenarioOverview ordered_block_ids must contain every BusinessBlock exactly once",
                 code="COVERAGE_MISMATCH", path="$.ordered_block_ids",
-                expected=sorted(valid_ids),
+                expected=valid_ids,
                 received=payload.get("ordered_block_ids") if isinstance(payload.get("ordered_block_ids"), list) else type(payload.get("ordered_block_ids")).__name__,
                 hint="Use output_contract.payload_template.ordered_block_ids unchanged.",
             )

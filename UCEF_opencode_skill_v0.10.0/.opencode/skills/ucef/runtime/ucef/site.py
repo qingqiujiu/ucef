@@ -23,12 +23,12 @@ CSS = r'''
 table{width:100%;border-collapse:collapse;background:var(--card)}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#e9ece7;color:#34413d;font-size:13px}.scroll{overflow:auto;border:1px solid var(--line);border-radius:6px}.field-group{margin-bottom:20px}.gap{border-left:4px solid var(--bad);padding:10px 12px;background:#fff1ee;margin:8px 0}.evidence{font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace;font-size:12px;background:#eef0eb;border-radius:5px;padding:9px;margin:6px 0;overflow-wrap:anywhere}.empty{padding:18px;color:var(--muted);text-align:center;border:1px dashed var(--line);border-radius:6px}
 .scenario-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.scenario-card{display:block;color:inherit;transition:transform .18s ease,border-color .18s ease}.scenario-card:hover{text-decoration:none;border-color:#7eaa9f;transform:translate(-2px,-2px)}.scenario-card h2{font-size:20px}.footer{padding:30px;text-align:center;color:var(--muted)}select,button,input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:white}button{background:var(--brand);color:#fff;border-color:var(--brand);cursor:pointer}.compare-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .overview-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.business-flow{counter-reset:block;display:grid;gap:16px}.business-block{scroll-margin-top:80px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:8px;padding:20px;box-shadow:4px 4px 0 #1c302b12;transition:border-color .2s ease,transform .2s ease}.business-block.focused{border-color:var(--accent);transform:translateX(3px)}.business-block.outline{border-left-color:#d1912c}.block-head{display:grid;grid-template-columns:48px 1fr auto;gap:13px;align-items:start}.block-number{width:42px;height:42px;border-radius:4px;background:var(--brand-dark);color:#fff;display:grid;place-items:center;font-weight:800}.block-head h2{margin:0 0 4px;font-size:22px}.block-why{margin:13px 0;padding:11px 13px;background:#fff3de;border-radius:5px;border-left:3px solid var(--accent)}.block-contract{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mini-panel{border:1px solid var(--line);border-radius:6px;padding:12px;background:#f7f8f3}.mini-panel b{display:block;color:#34413d;margin-bottom:5px}.business-steps{margin:14px 0 0;padding-left:24px}.business-steps li{margin:8px 0;padding-left:4px}.cross-cutting{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.technical-appendix{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:6px;background:#f3f4ef}
-.cockpit-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:1px;margin-top:18px;background:var(--line);border:1px solid var(--line)}.metric{background:#f7f6f0;padding:12px}.metric span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}.metric strong{font-size:20px}.scenario-console{display:grid;grid-template-columns:230px minmax(520px,1fr) 320px;gap:16px;align-items:start}.flow-rail,.evidence-drawer{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:4px 4px 0 #1c302b12}.panel-title{padding:13px 14px;border-bottom:1px solid var(--line);background:#e8ebe6}.panel-title h3{margin:0;font-size:17px}.flow-nav{padding:8px}.block-nav{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;color:var(--ink);border-color:transparent;margin:2px 0}.block-nav:hover,.block-nav.active{background:var(--soft);border-color:#b6cec6}.block-nav .nav-index{font-family:"Bahnschrift SemiCondensed",sans-serif;color:var(--brand);font-weight:800}.story-canvas{min-width:0}.sequence-board{background:#17231f;color:#eef7f3;border-radius:8px;padding:16px;box-shadow:5px 5px 0 #ed6a3233;overflow:auto}.sequence-board h2{margin:0;color:#fff}.sequence-board .muted{color:#adc0b9}.sequence-board svg{display:block;min-width:720px;width:100%;height:auto;margin-top:14px}.sequence-step{cursor:pointer}.sequence-step:hover path,.sequence-step:hover line{stroke:#fff}.evidence-body{padding:14px}.evidence-body h3{margin:0 0 5px}.evidence-list{margin:12px 0;padding:0;list-style:none}.evidence-list li{padding:8px 0;border-bottom:1px solid var(--line)}.artifact-link{display:block;padding:9px;border:1px solid var(--line);border-radius:5px;margin:7px 0;background:#f6f7f2}.artifact-link:hover{border-color:var(--brand);text-decoration:none}.artifact-link code{display:block;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.cockpit-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:1px;margin-top:18px;background:var(--line);border:1px solid var(--line)}.metric{background:#f7f6f0;padding:12px}.metric span{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em}.metric strong{font-size:20px}.scenario-console{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px;align-items:start}.flow-rail{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:4px 4px 0 #1c302b12}.panel-title{padding:13px 14px;border-bottom:1px solid var(--line);background:#e8ebe6}.panel-title h3{margin:0;font-size:17px}.flow-nav{padding:8px}.block-nav{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;color:var(--ink);border-color:transparent;margin:2px 0}.block-nav:hover,.block-nav.active{background:var(--soft);border-color:#b6cec6}.block-nav .nav-index{font-family:"Bahnschrift SemiCondensed",sans-serif;color:var(--brand);font-weight:800}.story-canvas{min-width:0}.sequence-board{background:#17231f;color:#eef7f3;border-radius:8px;padding:16px;box-shadow:5px 5px 0 #ed6a3233;overflow:auto}.sequence-board h2{margin:0;color:#fff}.sequence-board .muted{color:#adc0b9}.sequence-board svg{display:block;min-width:720px;width:100%;height:auto;margin-top:14px}.sequence-step{cursor:pointer}.sequence-step:hover path,.sequence-step:hover line{stroke:#fff}.business-value{color:#28332f;overflow-wrap:anywhere}.business-list{margin:0;padding-left:19px}.business-list li{margin:5px 0}.business-kv{display:grid;grid-template-columns:minmax(72px,auto) 1fr;gap:5px 10px;margin:0}.business-kv dt{color:var(--muted);font-size:12px}.business-kv dd{margin:0;min-width:0}.business-empty{color:var(--muted)}.evidence-open{background:#fff;color:var(--brand);border-color:#9ebbb2}.evidence-dialog{position:fixed;inset:0 0 0 auto;width:min(460px,92vw);height:100vh;max-height:none;margin:0;border:0;border-left:1px solid var(--line);padding:0;background:var(--card);color:var(--ink);box-shadow:-18px 0 48px #102f2740}.evidence-dialog::backdrop{background:#102f2745;backdrop-filter:blur(2px)}.dialog-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;gap:16px;align-items:start;padding:16px;border-bottom:1px solid var(--line);background:#e8ebe6}.dialog-head h3{margin:2px 0 0}.dialog-close{background:#fff;color:var(--ink);border-color:var(--line)}.evidence-body{padding:18px}.evidence-body h4{margin:18px 0 6px}.evidence-list{margin:8px 0;padding:0;list-style:none}.evidence-list li{padding:8px 0;border-bottom:1px solid var(--line)}.artifact-link{display:block;padding:9px;border:1px solid var(--line);border-radius:5px;margin:7px 0;background:#f6f7f2}.artifact-link:hover{border-color:var(--brand);text-decoration:none}.artifact-link code{display:block;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
 .execution-workspace{display:grid;grid-template-columns:minmax(280px,34%) minmax(420px,1fr) minmax(280px,30%);gap:14px;align-items:start}.execution-panel{background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0;overflow:hidden}.execution-panel>h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);background:#e9ece7}.panel-body{padding:12px;max-height:78vh;overflow:auto}.execution-tree,.execution-tree ul{list-style:none;margin:0;padding-left:15px}.execution-tree{padding-left:0}.tree-node{margin:5px 0}.tree-node>summary{cursor:pointer}.tree-leaf{margin:5px 0 5px 18px}.node-select,.field-select,.node-jump{width:100%;text-align:left;background:#fff;color:var(--ink);border-color:transparent;padding:6px 8px}.node-select:hover,.field-select:hover,.node-jump:hover{background:var(--soft);text-decoration:none}.node-select.active,.field-select.active{background:#dcece6;border-color:#9fbfb4;color:#153f36}.node-select.field-hit{box-shadow:inset 3px 0 var(--accent)}.node-type{display:inline-block;min-width:68px;margin-right:6px;color:var(--muted);font-size:11px;font-weight:700}.node-detail,.field-detail{display:none}.node-detail.active,.field-detail.active{display:block}.node-detail h2,.field-detail h3{margin-top:0}.detail-section{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.field-path{margin:8px 0;padding-left:20px}.field-path li{margin:7px 0}.field-meta{padding:9px;border:1px solid var(--line);border-radius:6px;margin-bottom:8px}.stage-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.stage-summary .card{box-shadow:none;padding:13px}.tree-note{font-size:12px;color:var(--muted);padding:8px 12px;background:#eef3ef;border-radius:5px;margin-bottom:10px}
 .artifact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}.artifact-shell{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px}.artifact-sidebar{position:sticky;top:72px;align-self:start}.artifact-meta{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}.artifact-viewer{background:#111916;color:#d9e8e2;border-radius:8px;min-height:620px;overflow:hidden}.artifact-toolbar{position:sticky;top:0;z-index:2;display:flex;gap:8px;padding:12px;background:#1b2a25;border-bottom:1px solid #385048}.artifact-toolbar input{flex:1;background:#f6f8f4}.json-tree{padding:16px;font:13px/1.65 "Cascadia Code",Consolas,monospace;overflow:auto}.json-tree details{margin-left:16px}.json-tree summary{cursor:pointer;color:#c5ddd4}.json-key{color:#8dd6c2}.json-string{color:#f3bd86}.json-number{color:#8eb9ff}.json-boolean{color:#e49be8}.json-null{color:#9ba7a3}.search-results{max-height:220px;overflow:auto}.search-hit{display:block;width:100%;text-align:left;background:#f4f6f1;color:var(--ink);border-color:transparent;margin:3px 0;font:12px/1.4 "Cascadia Code",Consolas,monospace}.search-hit:hover{border-color:var(--brand)}
-@media(max-width:1250px){.scenario-console{grid-template-columns:210px minmax(480px,1fr)}.evidence-drawer{position:relative;top:auto;grid-column:1/-1;max-height:none}.cockpit-metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1250px){.scenario-console{grid-template-columns:210px minmax(480px,1fr)}.cockpit-metrics{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:1100px){.execution-workspace{grid-template-columns:320px 1fr}.execution-panel.field-panel{grid-column:1/-1}.field-panel .panel-body{max-height:none;display:grid;grid-template-columns:260px 1fr;gap:12px}.artifact-shell{grid-template-columns:1fr}.artifact-sidebar{position:relative;top:auto}}
-@media(max-width:850px){.span4,.span6,.span8{grid-column:span 12}.stage-grid{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.wrap{padding:14px}.stage{margin-left:48px}.timeline{margin-left:0}.execution-workspace,.scenario-console{grid-template-columns:1fr}.flow-rail,.evidence-drawer{position:relative;top:auto;max-height:none}.flow-nav{display:grid;grid-template-columns:repeat(2,1fr)}.execution-panel.field-panel{grid-column:auto}.field-panel .panel-body{display:block}.panel-body{max-height:none}.cockpit-metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:850px){.span4,.span6,.span8{grid-column:span 12}.stage-grid{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.wrap{padding:14px}.stage{margin-left:48px}.timeline{margin-left:0}.execution-workspace,.scenario-console{grid-template-columns:1fr}.flow-rail{position:relative;top:auto;max-height:none}.flow-nav{display:grid;grid-template-columns:repeat(2,1fr)}.execution-panel.field-panel{grid-column:auto}.field-panel .panel-body{display:block}.panel-body{max-height:none}.cockpit-metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:850px){.overview-grid,.cross-cutting,.block-contract{grid-template-columns:1fr}.block-head{grid-template-columns:42px 1fr}.block-head>.chips{grid-column:1/-1}}
 '''
 
@@ -39,6 +39,69 @@ def esc(value: Any) -> str:
     if isinstance(value, (dict, list)):
         value = json.dumps(value, ensure_ascii=False, indent=2)
     return html.escape(str(value))
+
+
+FIELD_LABELS = {
+    "name": "名称", "type": "类型", "field": "字段", "source": "来源", "origin": "来源",
+    "from": "原值", "to": "去向", "detail": "说明", "description": "说明", "business_use": "业务用途",
+    "condition": "条件", "selected": "当前选择", "route": "当前路由", "reason": "原因",
+    "operation": "动作", "request": "请求", "response": "响应", "result": "结果", "state": "状态",
+    "transformation": "转换", "change": "变化", "fields": "涉及字段", "field_effect": "字段影响",
+    "system": "外部系统", "target_system": "目标系统", "store": "存储", "table": "数据表",
+    "step": "步骤", "action": "处理动作", "processing": "处理过程", "business_reason": "业务原因",
+    "business_effect": "业务效果", "expected_output": "预期结果", "outcome": "业务结果",
+}
+
+STATUS_LABELS = {
+    "COMPLETE": "已完成", "SUMMARY_COMPLETE": "概要已完成", "READABLE_COMPLETE": "可完整阅读",
+    "OUTLINE": "待补充", "ANALYZING": "分析中", "PLANNING": "规划中", "EXTRACTING": "分析重点块",
+    "FINALIZING": "生成总览", "STOPPED": "已停止", "GAP": "存在缺口", "FAILED": "失败",
+    "PENDING": "等待处理", "CLAIMED": "处理中", "SKIPPED": "已跳过", "QUICK": "快速",
+    "STANDARD": "标准", "DEEP": "深度", "NEW": "本次新分析", "EXACT_REUSE": "完整复用",
+    "PARTIAL_REUSE": "部分复用", "SUMMARY": "概要", "CRITICAL": "重点",
+}
+
+
+def status_text(value: Any) -> str:
+    text = str(value or "UNKNOWN")
+    return STATUS_LABELS.get(text, text)
+
+
+def item_dict(value: Any, fallback_key: str = "description") -> dict[str, Any]:
+    return value if isinstance(value, dict) else {fallback_key: value}
+
+
+def item_list(value: Any) -> list[Any]:
+    if value in (None, ""):
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+def business_value(value: Any, depth: int = 0) -> str:
+    if value in (None, "", [], {}):
+        return '<span class="business-empty">暂无</span>'
+    if isinstance(value, list):
+        visible = value[:8]
+        suffix = f'<li class="muted">另有 {len(value) - 8} 项，见技术证据</li>' if len(value) > 8 else ""
+        return '<ul class="business-list">' + "".join(f"<li>{business_value(item, depth + 1)}</li>" for item in visible) + suffix + "</ul>"
+    if isinstance(value, dict):
+        visible = [(key, child) for key, child in value.items() if child not in (None, "", [], {})][:10]
+        if not visible:
+            return '<span class="business-empty">暂无</span>'
+        return '<dl class="business-kv">' + "".join(
+            f"<dt>{esc(FIELD_LABELS.get(str(key), str(key)))}</dt><dd>{business_value(child, depth + 1)}</dd>"
+            for key, child in visible
+        ) + "</dl>"
+    return f'<span class="business-value">{esc(value)}</span>'
+
+
+def summary_text(value: Any, max_chars: int = 34) -> str:
+    if isinstance(value, dict):
+        preferred = next((value.get(key) for key in ("selected", "route", "name", "result", "reason") if value.get(key)), None)
+        value = preferred or "已形成判断，详情见业务块"
+    elif isinstance(value, list):
+        value = "、".join(str(item) for item in value[:3])
+    return short_text(value, max_chars)
 
 
 def preview(value: Any, max_chars: int = 1200) -> str:
@@ -54,24 +117,24 @@ def short_text(value: Any, max_chars: int = 34) -> str:
 def shell(title: str, body: str, relative_root: str = "") -> str:
     return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)}</title><style>{CSS}</style></head><body>
 <nav class="top"><strong>UCEF</strong><a href="{relative_root}index.html">业务链路</a><a href="{relative_root}compare.html">横向对比</a><a href="{relative_root}artifacts.html">原始制品</a><a href="{relative_root}memory.html">分析记忆</a></nav>
-<main class="wrap">{body}</main><footer class="footer">Generated from evidence-backed UCEF facts · source links are evidence, not the narrative</footer></body></html>'''
+<main class="wrap">{body}</main><footer class="footer">由 UCEF 已确认事实生成 · 源码位置用于核查，不代替业务说明</footer></body></html>'''
 
 
 def kv_rows(items: list[tuple[str, Any]]) -> str:
-    return '<div class="kv">' + "".join(f"<b>{esc(k)}</b><div class=\"value\">{esc(v)}</div>" for k, v in items) + "</div>"
+    return '<div class="kv">' + "".join(f"<b>{esc(k)}</b><div class=\"value\">{business_value(v)}</div>" for k, v in items) + "</div>"
 
 
 def badge(status: str | None) -> str:
     value = status or "UNKNOWN"
     cls = "good" if value in {"COMPLETE", "READABLE_COMPLETE", "CONFIRMED", "SCENARIO_CONFIRMED", "STATIC_VERIFIED"} else "bad" if value in {"INCOMPLETE", "UNKNOWN", "STALE"} else "warn"
-    return f'<span class="badge {cls}">{esc(value)}</span>'
+    return f'<span class="badge {cls}">{esc(status_text(value))}</span>'
 
 
 def table(headers: list[str], rows: list[list[Any]]) -> str:
     if not rows:
         return '<div class="empty">暂无已确认内容</div>'
     head = "".join(f"<th>{esc(x)}</th>" for x in headers)
-    body = "".join("<tr>" + "".join(f"<td>{esc(x)}</td>" for x in row) + "</tr>" for row in rows)
+    body = "".join("<tr>" + "".join(f"<td>{business_value(x)}</td>" for x in row) + "</tr>" for row in rows)
     return f'<div class="scroll"><table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table></div>'
 
 
@@ -100,6 +163,20 @@ class DossierSiteBuilder:
             scenario_id = scenario["scenario_id"]
             dossier = self.store.scenario_dossier(scenario_id)
             if dossier.get("business_blocks"):
+                latest_run = (dossier.get("analysis_runs") or [{}])[-1]
+                plan_id = latest_run.get("plan_id")
+                current_plan = next(
+                    (item for item in reversed(dossier.get("scenario_plans") or []) if item.get("plan_id") == plan_id),
+                    (dossier.get("scenario_plans") or [None])[-1],
+                )
+                dossier["current_plan"] = current_plan
+                if current_plan:
+                    block_index = {str(item.get("block_id")): item for item in dossier["business_blocks"]}
+                    dossier["business_blocks"] = [
+                        block_index[str(item["block_id"])]
+                        for item in current_plan.get("business_blocks") or []
+                        if str(item.get("block_id")) in block_index
+                    ]
                 blocks = dossier["business_blocks"]
                 overview = (dossier.get("scenario_overviews") or [{}])[-1]
                 completed = all(
@@ -182,7 +259,7 @@ function showHits(){const query=search.value.trim().toLowerCase();results.replac
 tree.append(makeNode(ARTIFACT_DATA,null,'',0));search.addEventListener('input',showHits);const pointer=new URLSearchParams(location.hash.slice(1)).get('pointer');if(pointer){search.value=pointer;showHits()}
 document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([JSON.stringify(ARTIFACT_DATA,null,2)+'\\n'],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='artifact-redacted.json';a.click();URL.revokeObjectURL(url)};
 </script>'''.replace("__DATA__", data)
-        body = f'''<section class="hero"><div class="section-kicker">Content-addressed evidence</div><div class="chips"><span class="chip">{esc(artifact.get('kind'))}</span>{badge(artifact.get('redaction_status'))}</div><h1>{esc(artifact.get('artifact_id'))}</h1><p>独立加载的配置证据页面；主链路只保存引用和 JSON Pointer。</p></section><section class="section artifact-shell"><aside class="artifact-sidebar"><div class="artifact-meta"><h2>制品信息</h2>{metadata}</div></aside>{viewer}</section>'''
+        body = f'''<section class="hero"><div class="section-kicker">内容寻址证据</div><div class="chips"><span class="chip">{esc(artifact.get('kind'))}</span>{badge(artifact.get('redaction_status'))}</div><h1>{esc(artifact.get('artifact_id'))}</h1><p>独立加载的配置证据页面；主链路只保存引用和 JSON Pointer。</p></section><section class="section artifact-shell"><aside class="artifact-sidebar"><div class="artifact-meta"><h2>制品信息</h2>{metadata}</div></aside>{viewer}</section>'''
         return shell(str(artifact.get("artifact_id")), body, "../")
 
     def _memory_page(self) -> str:
@@ -196,9 +273,9 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
                 [item.get("observation_kind"), item.get("source_id"), item.get("subject_key"), preview(item.get("claim")), item.get("confidence")]
                 for item in observations
             ]
-            cards.append(f'''<section class="card section"><div class="chips">{badge(work_unit.get('status'))}<span class="chip">{esc(work_unit_id)}</span><span class="chip">{memory.get('checkpoint_count')} checkpoints</span><span class="chip">{memory['observation_counts']['pending_assembly']} pending assembly</span><span class="chip">{memory['observation_counts']['evidenced']} evidenced</span><span class="chip">{memory['observation_counts']['assembled']} assembled</span></div><h2>{esc(work_unit.get('objective') or work_unit_id)}</h2>{kv_rows([('当前焦点',latest.get('current_focus')),('恢复摘要',latest.get('resume_summary')),('唯一下一探查',latest.get('next_probe')),('未决问题',latest.get('unresolved_questions')),('观察索引',memory.get('observation_index'))])}<h3>最近待装配事实</h3>{table(['类型','数据源','主题','事实','置信度'],rows)}{f'<div class="muted">另有 {memory.get("omitted_pending_observations")} 条未在本页展开，可用 memory-query 检索。</div>' if memory.get('omitted_pending_observations') else ''}</section>''')
-        content = f'''<section class="hero"><h1>分析记忆</h1><p class="muted">这里展示未完成 Work Unit 的持久化 Checkpoint 和 Observation 前沿。它们不会进入业务主叙事，直到被晋升为正式事实。</p></section>{''.join(cards) if cards else '<section class="section empty">尚无 Checkpoint。</section>'}'''
-        return shell("UCEF Analysis Memory", content)
+            cards.append(f'''<section class="card section"><div class="chips">{badge(work_unit.get('status'))}<span class="chip">{esc(work_unit_id)}</span><span class="chip">{memory.get('checkpoint_count')} 个检查点</span><span class="chip">{memory['observation_counts']['pending_assembly']} 项待装配</span><span class="chip">{memory['observation_counts']['evidenced']} 项已有证据</span><span class="chip">{memory['observation_counts']['assembled']} 项已装配</span></div><h2>{esc(work_unit.get('objective') or work_unit_id)}</h2>{kv_rows([('当前焦点',latest.get('current_focus')),('恢复摘要',latest.get('resume_summary')),('唯一下一探查',latest.get('next_probe')),('未决问题',latest.get('unresolved_questions')),('观察索引',memory.get('observation_index'))])}<h3>最近待装配事实</h3>{table(['类型','数据源','主题','事实','置信度'],rows)}{f'<div class="muted">另有 {memory.get("omitted_pending_observations")} 条未在本页展开，可用 memory-query 检索。</div>' if memory.get('omitted_pending_observations') else ''}</section>''')
+        content = f'''<section class="hero"><h1>分析记忆</h1><p class="muted">这里展示未完成工作单元的持久化检查点和待处理观察记录。它们被确认前不会进入业务主叙事。</p></section>{''.join(cards) if cards else '<section class="section empty">尚无检查点。</section>'}'''
+        return shell("UCEF 分析记忆", content)
 
     def _index_page(self, dossiers: list[dict[str, Any]]) -> str:
         cards = []
@@ -209,11 +286,11 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
             cards.append(f'''<a class="card scenario-card" href="scenarios/{safe_name(scenario['scenario_id'])}.html">
 <div class="chips">{badge(audit['readability_status'])}<span class="chip">{esc(scope.get('environment'))}</span></div>
 <h2>{esc(scenario.get('name'))}</h2><p>{esc(scenario.get('business_goal'))}</p>
-<div class="muted">{esc(scenario.get('business_operation'))} · {esc(scope.get('source_ids') or scope.get('project') or scope.get('repository'))}</div>
+<div class="muted">{esc(scenario.get('business_operation'))} · {business_value(scope.get('source_ids') or scope.get('project') or scope.get('repository'))}</div>
 <div class="chips" style="margin-top:12px"><span class="chip">{len(dossier.get('business_blocks') or [])} 业务块</span><span class="chip">{len([x for x in dossier.get('business_blocks') or [] if x.get('status') in {'COMPLETE','SUMMARY_COMPLETE'}])} 已完成</span><span class="chip">{len(dossier['execution_nodes'])} 技术证据节点</span><span class="chip">{len([x for x in dossier['gaps'] if x.get('status','OPEN')=='OPEN'])} 缺口</span></div></a>''')
-        content = f'''<section class="hero"><h1>{esc((self.config.get('site') or {}).get('title','UCEF Business Execution Dossiers'))}</h1><p class="muted">面向不了解系统的 Java 开发者：从业务目标进入，沿配置路由、字段演化、落库和外部交互阅读完整执行链。</p></section>
-<section class="section"><div class="section-title"><h2>业务场景</h2><a href="compare.html">进入横向对比 →</a></div><div class="scenario-list">{''.join(cards) if cards else '<div class="empty">尚无 Scenario。先创建场景并 ingest 第一个业务阶段。</div>'}</div></section>'''
-        return shell("UCEF Business Execution Dossiers", content)
+        content = f'''<section class="hero"><h1>{esc((self.config.get('site') or {}).get('title','UCEF 业务执行档案'))}</h1><p class="muted">面向不了解系统的 Java 开发者：从业务目标进入，沿配置路由、字段演化、落库和外部交互阅读完整执行链。</p></section>
+<section class="section"><div class="section-title"><h2>业务场景</h2><a href="compare.html">进入横向对比 →</a></div><div class="scenario-list">{''.join(cards) if cards else '<div class="empty">尚无业务场景。请先创建场景并导入第一个业务阶段。</div>'}</div></section>'''
+        return shell("UCEF 业务执行档案", content)
 
     def _scenario_page(self, dossier: dict[str, Any]) -> str:
         if dossier.get("business_blocks"):
@@ -284,8 +361,8 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
 
         for block in blocks:
             block_id = str(block.get("block_id") or "")
-            external = block.get("external_calls") or []
-            persistence = block.get("persistence") or []
+            external = item_list(block.get("external_calls"))
+            persistence = item_list(block.get("persistence"))
             if not external and not persistence:
                 raw_messages.append({
                     "from": service_label,
@@ -294,7 +371,8 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
                     "kind": "internal",
                     "block_id": block_id,
                 })
-            for interaction in external:
+            for raw_interaction in external:
+                interaction = item_dict(raw_interaction, "operation")
                 target = add_boundary(interaction.get("system") or interaction.get("target_system"))
                 raw_messages.append({
                     "from": service_label,
@@ -310,7 +388,8 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
                     "kind": "response",
                     "block_id": block_id,
                 })
-            for effect in persistence:
+            for raw_effect in persistence:
+                effect = item_dict(raw_effect, "operation")
                 target = add_boundary(effect.get("store") or effect.get("table") or "数据存储")
                 raw_messages.append({
                     "from": service_label,
@@ -384,10 +463,17 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
 
     def _direct_scenario_page(self, dossier: dict[str, Any]) -> str:
         scenario = dossier["scenario"]
-        overview = (dossier.get("scenario_overviews") or [{}])[-1]
-        plan = (dossier.get("scenario_plans") or [{}])[-1]
+        plan = dossier.get("current_plan") or (dossier.get("scenario_plans") or [{}])[-1]
         run = (dossier.get("analysis_runs") or [{}])[-1]
         blocks = sorted(dossier.get("business_blocks") or [], key=lambda item: float(item.get("sequence_no") or 0))
+        block_ids = [str(block.get("block_id")) for block in blocks]
+        overview = next(
+            (
+                item for item in reversed(dossier.get("scenario_overviews") or [])
+                if [str(value) for value in item.get("ordered_block_ids") or []] == block_ids
+            ),
+            {},
+        )
         scope = scenario.get("scope") or {}
         trigger = scenario.get("trigger") or {}
         one_sentence = overview.get("one_sentence") or scenario.get("business_goal") or "业务骨架正在形成"
@@ -395,20 +481,21 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
         completed_count = len([x for x in blocks if x.get("status") in {"COMPLETE", "SUMMARY_COMPLETE"}])
         open_gaps = list(overview.get("open_gaps") or []) + [x for x in dossier.get("gaps") or [] if x.get("status", "OPEN") == "OPEN"]
         artifacts = self.artifacts.list_artifacts(str(scenario.get("scenario_id")))
-        hero = f'''<section class="hero"><div class="section-kicker">Scenario control room</div><div class="chips">{badge(overview.get('status') or run.get('status') or 'ANALYZING')}<span class="chip">{esc(scenario.get('scenario_id'))}</span><span class="chip">{esc(run.get('mode') or 'DIRECT')}</span></div><h1>{esc(scenario.get('name'))}</h1><p>{esc(one_sentence)}</p><div class="cockpit-metrics"><div class="metric"><span>环境</span><strong>{esc(scope.get('environment'))}</strong></div><div class="metric"><span>当前选路</span><strong>{esc(short_text(selected_route, 24))}</strong></div><div class="metric"><span>业务块</span><strong>{completed_count}/{len(blocks)}</strong></div><div class="metric"><span>P0 字段</span><strong>{esc(len(plan.get('critical_fields') or []))}</strong></div><div class="metric"><span>Gap / 制品</span><strong>{len(open_gaps)} / {len(artifacts)}</strong></div></div></section>'''
+        hero = f'''<section class="hero"><div class="section-kicker">场景总览</div><div class="chips">{badge(overview.get('status') or run.get('status') or 'ANALYZING')}<span class="chip">{esc(scenario.get('scenario_id'))}</span><span class="chip">{esc(status_text(run.get('mode') or 'DIRECT'))}</span></div><h1>{esc(scenario.get('name'))}</h1><p>{esc(one_sentence)}</p><div class="cockpit-metrics"><div class="metric"><span>运行环境</span><strong>{esc(scope.get('environment'))}</strong></div><div class="metric"><span>当前选路</span><strong>{esc(summary_text(selected_route, 24))}</strong></div><div class="metric"><span>业务块完成度</span><strong>{completed_count}/{len(blocks)}</strong></div><div class="metric"><span>关键字段</span><strong>{esc(len(plan.get('critical_fields') or []))}</strong></div><div class="metric"><span>缺口 / 原始制品</span><strong>{len(open_gaps)} / {len(artifacts)}</strong></div></div></section>'''
 
         nav = "".join(f'''<button class="block-nav" data-block="{esc(block.get('block_id'))}"><span class="nav-index">{index:02d}</span><span>{esc(block.get('title'))}</span></button>''' for index, block in enumerate(blocks, start=1))
         block_html = "".join(self._business_block_card(index, block) for index, block in enumerate(blocks, start=1))
         sequence = self._sequence_diagram(scenario, blocks, plan)
         artifact_links = "".join(f'''<a class="artifact-link" href="{self._artifact_href(item)}"><b>{esc(item.get('kind'))}</b><code>{esc(item.get('artifact_id'))} · {esc(item.get('environment'))}</code></a>''' for item in artifacts)
-        console = f'''<section class="section scenario-console"><aside class="flow-rail"><div class="panel-title"><div class="section-kicker">Business spine</div><h3>业务链路导航</h3></div><div class="flow-nav">{nav or '<div class="empty">尚无业务块</div>'}</div></aside><main class="story-canvas"><div class="sequence-board"><div class="section-kicker">Deterministic projection</div><h2>业务时序图</h2><p class="muted">由 BusinessBlock、外部调用和持久化事实自动生成；点击交互定位业务块。</p>{sequence}</div><section class="section"><div class="section-title"><div><div class="section-kicker">Narrative</div><h2>业务执行过程</h2></div><span class="muted">业务解释默认展开，技术证据按需查看</span></div><div class="business-flow">{block_html}</div></section></main><aside class="evidence-drawer"><div class="panel-title"><div class="section-kicker">Evidence drawer</div><h3 id="drawer-title">选择业务块</h3></div><div class="evidence-body"><p id="drawer-why" class="muted">点击左侧步骤或时序图消息查看当前依据。</p><div id="drawer-decision"></div><h4>方法与证据</h4><ul id="drawer-methods" class="evidence-list"></ul><div id="drawer-refs" class="evidence"></div><h4>场景原始制品</h4>{artifact_links or '<div class="empty">尚未登记配置 JSON。</div>'}</div></aside></section>'''
+        console = f'''<section class="section scenario-console"><aside class="flow-rail"><div class="panel-title"><div class="section-kicker">业务主线</div><h3>按执行顺序阅读</h3></div><div class="flow-nav">{nav or '<div class="empty">尚无业务块</div>'}</div></aside><div class="story-canvas"><div class="sequence-board"><div class="section-kicker">自动生成</div><h2>业务时序图</h2><p class="muted">根据已提交的业务块、外部调用和持久化事实生成；点击交互可定位到对应业务块。</p>{sequence}</div><section class="section"><div class="section-title"><div><div class="section-kicker">业务说明</div><h2>业务执行过程</h2></div><span class="muted">先读业务结论；方法和源码依据按需打开</span></div><div class="business-flow">{block_html}</div></section></div><dialog class="evidence-dialog" id="evidence-dialog"><div class="dialog-head"><div><div class="section-kicker">技术依据</div><h3 id="drawer-title">业务块依据</h3></div><button class="dialog-close" id="drawer-close" type="button">关闭</button></div><div class="evidence-body"><p id="drawer-why" class="muted"></p><h4>关键判断</h4><div id="drawer-decision"></div><h4>方法与源码位置</h4><ul id="drawer-methods" class="evidence-list"></ul><details><summary>查看证据引用</summary><div id="drawer-refs" class="evidence"></div></details><h4>场景原始制品</h4>{artifact_links or '<div class="empty">尚未登记配置 JSON。</div>'}</div></dialog></section>'''
 
         field_rows = []
-        for item in overview.get("key_field_journeys") or []:
+        for raw_item in item_list(overview.get("key_field_journeys")):
+            item = item_dict(raw_item, "journey")
             field_rows.append([item.get("field") or item.get("name"), item.get("origin"), item.get("journey") or item.get("steps"), item.get("sink"), item.get("business_use")])
-        external_rows = [[item.get("system") or item.get("target_system"), item.get("operation"), item.get("request_origin"), item.get("response_use"), item.get("business_effect")] for item in overview.get("external_effects") or []]
-        persistence_rows = [[item.get("store") or item.get("table"), item.get("operation"), item.get("field_mappings") or item.get("mappings"), item.get("business_effect")] for item in overview.get("persistence_effects") or []]
-        failure_rows = [[item.get("condition") or item.get("name"), item.get("behavior"), item.get("business_outcome")] for item in overview.get("failure_outcomes") or []]
+        external_rows = [[item.get("system") or item.get("target_system"), item.get("operation"), item.get("request_origin"), item.get("response_use"), item.get("business_effect")] for item in (item_dict(raw, "business_effect") for raw in item_list(overview.get("external_effects")))]
+        persistence_rows = [[item.get("store") or item.get("table"), item.get("operation"), item.get("field_mappings") or item.get("mappings"), item.get("business_effect")] for item in (item_dict(raw, "business_effect") for raw in item_list(overview.get("persistence_effects")))]
+        failure_rows = [[item.get("condition") or item.get("name"), item.get("behavior"), item.get("business_outcome") or item.get("description")] for item in (item_dict(raw) for raw in item_list(overview.get("failure_outcomes")))]
         cross = f'''<section class="section cross-cutting"><div class="card"><h2>字段如何走完整条链（P0）</h2>{table(['字段','来源','变化过程','终点','业务用途'],field_rows)}</div><div class="card"><h2>外部系统与业务副作用</h2>{table(['系统','操作','请求来源','响应用途','业务效果'],external_rows)}</div><div class="card"><h2>持久化结果</h2>{table(['存储','动作','字段映射','业务效果'],persistence_rows)}</div><div class="card"><h2>失败与降级</h2>{table(['条件','系统行为','业务结果'],failure_rows)}</div></section>'''
 
         gaps = f'''<section class="section"><div class="section-title"><h2>明确未解决的问题</h2><span class="muted">达到预算后保留为 Gap，不自动继续挖掘</span></div>{''.join(f'<div class="gap">{esc(item.get("question") if isinstance(item,dict) else item)}</div>' for item in open_gaps) if open_gaps else '<div class="card">当前没有开放 Gap。</div>'}</section>'''
@@ -425,11 +512,11 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
                 "status": block.get("status"),
                 "methods": [
                     {
-                        "symbol": item.get("symbol"),
-                        "location": item.get("location") or f"{item.get('source_id') or ''}:{item.get('file') or ''}:{item.get('lines') or ''}",
-                        "purpose": item.get("purpose") or item.get("role"),
+                        "symbol": method.get("symbol") or method.get("name") or method.get("description"),
+                        "location": method.get("location") or f"{method.get('source_id') or ''}:{method.get('file') or ''}:{method.get('lines') or ''}",
+                        "purpose": method.get("purpose") or method.get("role"),
                     }
-                    for item in block.get("method_evidence") or []
+                    for method in (item_dict(item) for item in item_list(block.get("method_evidence")))
                 ],
                 "refs": block.get("evidence_refs") or [],
             }
@@ -437,38 +524,45 @@ document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([J
         }
         drawer_json = json.dumps(drawer_data, ensure_ascii=False).replace("</", "<\\/")
         first_block = str(blocks[0].get("block_id")) if blocks else ""
-        script = '''<script>const UCEF_BLOCKS=__DATA__,firstBlock=__FIRST__;
-const text=(el,value)=>{el.textContent=value==null?'—':typeof value==='string'?value:JSON.stringify(value,null,2)};
-function selectBusinessBlock(id,shouldScroll=false){const data=UCEF_BLOCKS[id];if(!data)return;document.querySelectorAll('.block-nav').forEach(x=>x.classList.toggle('active',x.dataset.block===id));document.querySelectorAll('.business-block').forEach(x=>x.classList.toggle('focused',x.dataset.block===id));text(document.getElementById('drawer-title'),data.title);text(document.getElementById('drawer-why'),data.why);text(document.getElementById('drawer-decision'),data.decision);text(document.getElementById('drawer-refs'),data.refs);const methods=document.getElementById('drawer-methods');methods.replaceChildren();for(const method of data.methods||[]){const li=document.createElement('li'),strong=document.createElement('strong'),small=document.createElement('div');strong.textContent=method.symbol||'未命名方法';small.className='muted';small.textContent=(method.location||'')+' · '+(method.purpose||'');li.append(strong,small);methods.append(li)}if(!(data.methods||[]).length)methods.textContent='当前业务块没有方法证据。';if(shouldScroll)document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})}
-document.querySelectorAll('.block-nav').forEach(x=>x.addEventListener('click',()=>selectBusinessBlock(x.dataset.block,true)));document.querySelectorAll('.sequence-step').forEach(x=>{const activate=()=>selectBusinessBlock(x.dataset.block,true);x.addEventListener('click',activate);x.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')activate()})});selectBusinessBlock(firstBlock);</script>'''.replace("__DATA__", drawer_json).replace("__FIRST__", json.dumps(first_block, ensure_ascii=False))
+        script = '''<script>const UCEF_BLOCKS=__DATA__,firstBlock=__FIRST__,dialog=document.getElementById('evidence-dialog'),labels={condition:'条件',selected:'当前选择',route:'当前路由',reason:'原因',result:'结果',name:'名称',source:'来源',description:'说明'};
+const readable=value=>value==null||value===''?'—':typeof value==='string'||typeof value==='number'||typeof value==='boolean'?String(value):Array.isArray(value)?value.map(readable).join('、'):Object.entries(value).map(([key,item])=>`${labels[key]||key}：${readable(item)}`).join('；');
+const text=(el,value)=>{if(el)el.textContent=readable(value)};
+function focusBusinessBlock(id,shouldScroll=false){if(!UCEF_BLOCKS[id])return;document.querySelectorAll('.block-nav').forEach(x=>x.classList.toggle('active',x.dataset.block===id));document.querySelectorAll('.business-block').forEach(x=>x.classList.toggle('focused',x.dataset.block===id));if(shouldScroll)document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})}
+function openEvidence(id){const data=UCEF_BLOCKS[id];if(!data)return;focusBusinessBlock(id);text(document.getElementById('drawer-title'),data.title);text(document.getElementById('drawer-why'),data.why);text(document.getElementById('drawer-decision'),data.decision);text(document.getElementById('drawer-refs'),data.refs);const methods=document.getElementById('drawer-methods');methods.replaceChildren();for(const method of data.methods||[]){const li=document.createElement('li'),strong=document.createElement('strong'),small=document.createElement('div');strong.textContent=method.symbol||'未命名方法';small.className='muted';small.textContent=[method.location,method.purpose].filter(Boolean).join(' · ');li.append(strong,small);methods.append(li)}if(!(data.methods||[]).length)methods.textContent='当前业务块没有已登记的方法证据。';if(!dialog.open)dialog.showModal()}
+document.querySelectorAll('.block-nav').forEach(x=>x.addEventListener('click',()=>focusBusinessBlock(x.dataset.block,true)));document.querySelectorAll('.sequence-step').forEach(x=>{const activate=()=>focusBusinessBlock(x.dataset.block,true);x.addEventListener('click',activate);x.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate()}})});document.querySelectorAll('.evidence-open').forEach(x=>x.addEventListener('click',()=>openEvidence(x.dataset.block)));document.getElementById('drawer-close')?.addEventListener('click',()=>dialog.close());dialog?.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});if(firstBlock)focusBusinessBlock(firstBlock);</script>'''.replace("__DATA__", drawer_json).replace("__FIRST__", json.dumps(first_block, ensure_ascii=False))
         return shell(str(scenario.get("name")), hero + console + cross + gaps + appendix + script, "../")
 
     def _business_block_card(self, index: int, block: dict[str, Any]) -> str:
         status = str(block.get("status") or "OUTLINE")
         inputs = block.get("inputs") or []
         decision = block.get("decision") or {}
-        steps = block.get("implementation_steps") or []
-        step_html = "".join(
-            f'''<li><b>{esc(step.get('name') or step.get('action'))}</b> — {esc(step.get('business_reason') or step.get('description'))}<div class="muted">{esc(step.get('field_effect') or step.get('fields'))}</div></li>'''
-            for step in steps
-        )
-        field_rows = [[item.get("field"), item.get("from"), item.get("transformation") or item.get("change"), item.get("to"), item.get("business_use")] for item in block.get("field_changes") or []]
-        external_rows = [[item.get("system") or item.get("target_system"), item.get("operation"), item.get("request"), item.get("response"), item.get("business_effect")] for item in block.get("external_calls") or []]
-        persist_rows = [[item.get("store") or item.get("table"), item.get("operation"), item.get("mappings"), item.get("business_effect")] for item in block.get("persistence") or []]
+        step_parts = []
+        for sequence, raw_step in enumerate(item_list(block.get("implementation_steps")), start=1):
+            step = item_dict(raw_step, "action")
+            action = step.get("name") or step.get("action") or step.get("processing") or step.get("description") or f"步骤 {sequence}"
+            reason = step.get("business_reason") or step.get("reason") or step.get("description")
+            fields = step.get("field_effect") or step.get("fields") or step.get("result")
+            step_parts.append(
+                f'''<li><b>{esc(action)}</b>{f' — {esc(reason)}' if reason and reason != action else ''}{f'<div class="muted">字段/结果：{business_value(fields)}</div>' if fields else ''}</li>'''
+            )
+        step_html = "".join(step_parts)
+        field_rows = [[item.get("field") or item.get("name"), item.get("from") or item.get("source"), item.get("transformation") or item.get("change") or item.get("description"), item.get("to") or item.get("target"), item.get("business_use")] for item in (item_dict(raw) for raw in item_list(block.get("field_changes")))]
+        external_rows = [[item.get("system") or item.get("target_system"), item.get("operation") or item.get("description"), item.get("request"), item.get("response"), item.get("business_effect")] for item in (item_dict(raw) for raw in item_list(block.get("external_calls")))]
+        persist_rows = [[item.get("store") or item.get("table"), item.get("operation") or item.get("description"), item.get("mappings"), item.get("business_effect")] for item in (item_dict(raw) for raw in item_list(block.get("persistence")))]
         details = ""
         if field_rows or external_rows or persist_rows:
             details = f'''<details class="detail-section"><summary><b>字段、外部接口与落库细节</b></summary><div style="margin-top:10px"><h4>字段变化</h4>{table(['字段','来源','转换','去向','业务用途'],field_rows)}<h4>外部交互</h4>{table(['系统','操作','请求','响应','业务效果'],external_rows)}<h4>持久化</h4>{table(['存储','动作','映射','业务效果'],persist_rows)}</div></details>'''
-        reuse = block.get("reuse") or {}
-        reuse_chip = f'<span class="badge reuse">{esc(reuse.get("decision"))}</span>' if reuse.get("decision") else ""
+        reuse = item_dict(block.get("reuse") or {}, "basis")
+        reuse_chip = f'<span class="badge reuse">{esc(status_text(reuse.get("decision")))}</span>' if reuse.get("decision") else ""
         block_id = str(block.get("block_id") or f"block-{index}")
-        return f'''<article id="{esc(block_id)}" data-block="{esc(block_id)}" class="business-block {'outline' if status == 'OUTLINE' else ''}"><div class="block-head"><div class="block-number">{index}</div><div><h2>{esc(block.get('title'))}</h2><p>{esc(block.get('business_goal'))}</p></div><div class="chips"><span class="chip">{esc(block.get('depth'))}</span>{reuse_chip}{badge(status)}</div></div><div class="block-why"><b>为什么执行：</b>{esc(block.get('why_current'))}</div><div class="block-contract"><div class="mini-panel"><b>收到什么</b>{esc(inputs)}</div><div class="mini-panel"><b>关键判断</b>{esc(decision)}</div><div class="mini-panel"><b>产生什么</b>{esc(block.get('output'))}</div></div>{f'<ol class="business-steps">{step_html}</ol>' if step_html else '<div class="empty" style="margin-top:12px">实现细节尚未提交，当前先展示业务骨架。</div>'}{f'<div class="muted" style="margin-top:10px">复用依据：{esc(reuse.get("basis"))}</div>' if reuse.get('basis') else ''}{details}</article>'''
+        return f'''<article id="{esc(block_id)}" data-block="{esc(block_id)}" class="business-block {'outline' if status == 'OUTLINE' else ''}"><div class="block-head"><div class="block-number">{index}</div><div><h2>{esc(block.get('title'))}</h2><p>{esc(block.get('business_goal'))}</p></div><div class="chips"><span class="chip">{esc(status_text(block.get('depth')))}</span>{reuse_chip}{badge(status)}<button class="evidence-open" type="button" data-block="{esc(block_id)}">查看技术依据</button></div></div><div class="block-why"><b>为什么执行：</b>{esc(block.get('why_current'))}</div><div class="block-contract"><div class="mini-panel"><b>收到什么</b>{business_value(inputs)}</div><div class="mini-panel"><b>关键判断</b>{business_value(decision)}</div><div class="mini-panel"><b>产生什么</b>{business_value(block.get('output'))}</div></div>{f'<ol class="business-steps">{step_html}</ol>' if step_html else '<div class="empty" style="margin-top:12px">实现细节尚未提交，当前先展示业务骨架。</div>'}{f'<div class="muted" style="margin-top:10px">复用依据：{esc(reuse.get("basis"))}</div>' if reuse.get('basis') else ''}{details}</article>'''
 
     def _block_evidence(self, block: dict[str, Any]) -> str:
-        methods = block.get("method_evidence") or []
+        methods = [item_dict(item) for item in item_list(block.get("method_evidence"))]
         refs = block.get("evidence_refs") or []
         if not methods and not refs:
             return ""
-        return f'''<details><summary>{esc(block.get('title'))} · {len(methods)} 个方法证据</summary>{table(['方法/桥接','源码位置','作用','为什么不再深入'],[[item.get('symbol'),item.get('location') or f"{item.get('source_id') or ''}:{item.get('file') or ''}:{item.get('lines') or ''}",item.get('role') or item.get('purpose'),item.get('transparent_reason')] for item in methods])}<div class="evidence">{esc(refs)}</div></details>'''
+        return f'''<details><summary>{esc(block.get('title'))} · {len(methods)} 个方法证据</summary>{table(['方法/桥接','源码位置','作用','为什么不再深入'],[[item.get('symbol') or item.get('description'),item.get('location') or f"{item.get('source_id') or ''}:{item.get('file') or ''}:{item.get('lines') or ''}",item.get('role') or item.get('purpose'),item.get('transparent_reason')] for item in methods])}<div class="evidence">{business_value(refs)}</div></details>'''
 
     def _implementation_layers(self, dossier: dict[str, Any]) -> str:
         slices_by_stage: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -667,11 +761,11 @@ ucefSelectNode({json.dumps(first_node, ensure_ascii=False)});ucefSelectField({js
             methods = [
                 {"method_definition_id": item.get("symbol"), "name": item.get("symbol"), "business_purpose": item.get("purpose") or item.get("role"), "node_type": "METHOD_INVOCATION"}
                 for block in dossier.get("business_blocks") or []
-                for item in block.get("method_evidence") or []
+                for item in (item_dict(raw) for raw in item_list(block.get("method_evidence")))
             ] or dossier["execution_nodes"]
             fields = [
                 {"canonical_field": item.get("field") or item.get("name"), "priority": "P0", "tracking_status": item.get("journey") or item.get("steps")}
-                for item in overview.get("key_field_journeys") or []
+                for item in (item_dict(raw, "field") for raw in item_list(overview.get("key_field_journeys")))
             ] or dossier["field_inventory"]
             decisions = [
                 {"question": block.get("title"), "current_outcome": block.get("decision"), "reason": block.get("why_current")}
@@ -679,11 +773,11 @@ ucefSelectNode({json.dumps(first_node, ensure_ascii=False)});ucefSelectField({js
             ] or dossier["route_decisions"]
             external = [
                 {"target_system": item.get("system") or item.get("target_system"), "operation": item.get("operation"), "business_purpose": item.get("business_effect") or item.get("effect")}
-                for item in overview.get("external_effects") or []
+                for item in (item_dict(raw, "business_effect") for raw in item_list(overview.get("external_effects")))
             ] or dossier["external_interactions"]
             persistence = [
                 {"store": item.get("store") or item.get("table"), "operation": item.get("operation"), "business_effect": item.get("business_effect") or item.get("effect")}
-                for item in overview.get("persistence_effects") or []
+                for item in (item_dict(raw, "business_effect") for raw in item_list(overview.get("persistence_effects")))
             ] or dossier["persistence_effects"]
             compact.append({
                 "scenario": dossier["scenario"], "trace_stages": blocks,
