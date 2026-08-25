@@ -61,3 +61,14 @@ python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis 
 ```
 
 默认结果位于 `D:/ucef/order-analysis/site/index.html`。旧版 Work Unit、Checkpoint 和 layered result 仍可导入，但不再是新分析的默认流程。
+
+## 原始配置制品与可视化站点
+
+配置 JSON 不需要交给 Agent 改写或放入 Scenario 主页面。运行时会按内容哈希保存脱敏快照，并为它生成独立的可搜索 JSON 页面：
+
+```bash
+python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis artifact-add --file D:/snapshots/payment-prod.json --scenario SCN-PAY --source-id order-core --environment PROD --snapshot 2026-08-25
+python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis artifact-list --scenario SCN-PAY
+```
+
+`password`、`secret`、`token`、访问密钥等常见敏感键默认脱敏；额外键可重复使用 `--redact-key` 指定。站点主场景页提供业务链路导航、由已提交事实确定性生成的 SVG 时序图和证据抽屉。原始制品在 `site/artifacts/` 下独立加载，不进入模型上下文或 Scenario HTML。

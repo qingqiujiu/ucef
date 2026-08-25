@@ -5,25 +5,30 @@ import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
+from .artifacts import ArtifactStore
 from .audit import audit_scenario
 from .core import safe_name
 from .store import FactStore
 
 
 CSS = r'''
-:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#d9e1ec;--brand:#2457d6;--good:#147a51;--warn:#a05a00;--bad:#b42318;--soft:#eef3ff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,Segoe UI,Arial,sans-serif}a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}
-.top{background:#101828;color:#fff;padding:16px 28px;display:flex;gap:24px;align-items:center}.top strong{font-size:19px}.top a{color:#dbe6ff}.wrap{max-width:1380px;margin:0 auto;padding:26px}.hero,.card,.stage{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 16px #1018280b}.hero{padding:24px}.hero h1{margin:0 0 8px;font-size:28px}.muted{color:var(--muted)}
-.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}.card{padding:18px}.card h2,.card h3{margin-top:0}.section{margin-top:24px}.section-title{display:flex;justify-content:space-between;align-items:end;margin:0 0 12px}.section-title h2{margin:0}
-.chips{display:flex;gap:7px;flex-wrap:wrap}.chip,.badge{border-radius:999px;padding:3px 9px;font-size:12px;background:#edf2f7;color:#344054}.good{background:#e7f6ef;color:var(--good)}.warn{background:#fff3df;color:var(--warn)}.bad{background:#ffebe9;color:var(--bad)}.reuse{background:#e8edff;color:#3546a8}
-.kv{display:grid;grid-template-columns:150px 1fr;gap:8px 14px}.kv b{color:#344054}.value{white-space:pre-wrap;overflow-wrap:anywhere}.timeline{position:relative;margin-left:18px}.timeline:before{content:"";position:absolute;left:19px;top:28px;bottom:28px;width:2px;background:#b7c7e8}.stage{position:relative;margin:0 0 18px 58px;padding:20px}.stage:before{content:attr(data-n);position:absolute;left:-58px;top:20px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--brand);color:white;font-weight:700;box-shadow:0 0 0 5px var(--bg)}.stage h3{margin:0 0 4px;font-size:19px}.stage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}.stage-cell{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fbfcfe}.stage-cell b{display:block;margin-bottom:4px;color:#344054}.handoff{margin-top:12px;padding:9px 12px;background:var(--soft);border-radius:9px}.fragment{margin-top:12px;border-left:4px solid #7c8dde;padding:10px 12px;background:#f6f7ff}.fragment h4{margin:0 0 5px}.why{margin-top:10px;padding:10px 12px;background:#fff8e8;border-left:4px solid #f0a020}
-table{width:100%;border-collapse:collapse;background:white}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f7f9fc;color:#344054;font-size:13px}.scroll{overflow:auto;border:1px solid var(--line);border-radius:10px}.field-group{margin-bottom:20px}.gap{border-left:4px solid var(--bad);padding:10px 12px;background:#fff5f4;margin:8px 0}.evidence{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;background:#f7f8fa;border-radius:8px;padding:9px;margin:6px 0;overflow-wrap:anywhere}.empty{padding:18px;color:var(--muted);text-align:center;border:1px dashed var(--line);border-radius:10px}
-.scenario-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.scenario-card{display:block;color:inherit}.scenario-card:hover{text-decoration:none;border-color:#9ab2ee;transform:translateY(-1px)}.scenario-card h2{font-size:18px}.footer{padding:30px;text-align:center;color:var(--muted)}select,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:white}button{background:var(--brand);color:#fff;border-color:var(--brand);cursor:pointer}.compare-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.overview-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.business-flow{counter-reset:block;display:grid;gap:16px}.business-block{background:#fff;border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:14px;padding:20px;box-shadow:0 4px 16px #1018280b}.business-block.outline{border-left-color:#f0a020}.block-head{display:grid;grid-template-columns:48px 1fr auto;gap:13px;align-items:start}.block-number{width:42px;height:42px;border-radius:12px;background:#e8efff;color:#1946a3;display:grid;place-items:center;font-weight:800}.block-head h2{margin:0 0 4px;font-size:21px}.block-why{margin:13px 0;padding:11px 13px;background:#fff8e8;border-radius:9px}.block-contract{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mini-panel{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fbfcfe}.mini-panel b{display:block;color:#344054;margin-bottom:5px}.business-steps{margin:14px 0 0;padding-left:24px}.business-steps li{margin:8px 0;padding-left:4px}.cross-cutting{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.technical-appendix{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fafbfc}
-.execution-workspace{display:grid;grid-template-columns:minmax(280px,34%) minmax(420px,1fr) minmax(280px,30%);gap:14px;align-items:start}.execution-panel{background:#fff;border:1px solid var(--line);border-radius:14px;min-width:0;overflow:hidden}.execution-panel>h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);background:#f8faff}.panel-body{padding:12px;max-height:78vh;overflow:auto}.execution-tree,.execution-tree ul{list-style:none;margin:0;padding-left:15px}.execution-tree{padding-left:0}.tree-node{margin:5px 0}.tree-node>summary{cursor:pointer}.tree-leaf{margin:5px 0 5px 18px}.node-select,.field-select,.node-jump{width:100%;text-align:left;background:#fff;color:var(--ink);border-color:transparent;padding:6px 8px}.node-select:hover,.field-select:hover,.node-jump:hover{background:#eef3ff;text-decoration:none}.node-select.active,.field-select.active{background:#dfe8ff;border-color:#9ab2ee;color:#183b8f}.node-select.field-hit{box-shadow:inset 3px 0 #f0a020}.node-type{display:inline-block;min-width:68px;margin-right:6px;color:var(--muted);font-size:11px;font-weight:700}.node-detail,.field-detail{display:none}.node-detail.active,.field-detail.active{display:block}.node-detail h2,.field-detail h3{margin-top:0}.detail-section{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.field-path{margin:8px 0;padding-left:20px}.field-path li{margin:7px 0}.field-meta{padding:9px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px}.stage-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.stage-summary .card{box-shadow:none;padding:13px}.tree-note{font-size:12px;color:var(--muted);padding:8px 12px;background:#f8faff;border-radius:8px;margin-bottom:10px}
-@media(max-width:1100px){.execution-workspace{grid-template-columns:320px 1fr}.execution-panel.field-panel{grid-column:1/-1}.field-panel .panel-body{max-height:none;display:grid;grid-template-columns:260px 1fr;gap:12px}}
-@media(max-width:850px){.span4,.span6,.span8{grid-column:span 12}.stage-grid{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.wrap{padding:15px}.stage{margin-left:48px}.timeline{margin-left:0}.execution-workspace{grid-template-columns:1fr}.execution-panel.field-panel{grid-column:auto}.field-panel .panel-body{display:block}.panel-body{max-height:none}}
+:root{--bg:#eeece5;--paper:#fbfaf5;--card:#fffef9;--ink:#17211f;--muted:#66706d;--line:#cfd3ca;--brand:#0d6a58;--brand-dark:#103d35;--accent:#ed6a32;--good:#146847;--warn:#9a5b06;--bad:#a83329;--soft:#e4f0eb;--grid:#d8d9d0}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background-color:var(--bg);background-image:linear-gradient(#ffffff50 1px,transparent 1px),linear-gradient(90deg,#ffffff50 1px,transparent 1px);background-size:24px 24px;color:var(--ink);font:15px/1.58 "Aptos","Microsoft YaHei UI","Noto Sans SC",sans-serif}h1,h2,h3,.top strong,.metric strong{font-family:"Bahnschrift SemiCondensed","DIN Alternate","Microsoft YaHei UI",sans-serif;letter-spacing:.015em}a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}
+.top{position:sticky;top:0;z-index:50;background:var(--brand-dark);color:#fff;padding:13px 28px;display:flex;gap:22px;align-items:center;border-bottom:3px solid var(--accent)}.top strong{font-size:21px;letter-spacing:.14em}.top a{color:#dcebe5}.wrap{max-width:1560px;margin:0 auto;padding:24px}.hero,.card,.stage{background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:5px 5px 0 #1c302b12}.hero{padding:24px;border-top:5px solid var(--brand)}.hero h1{margin:0 0 8px;font-size:31px}.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}.card{padding:18px}.card h2,.card h3{margin-top:0}.section{margin-top:24px}.section-title{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:0 0 12px}.section-title h2{margin:0}.section-kicker{text-transform:uppercase;letter-spacing:.16em;font-size:11px;color:var(--brand);font-weight:800}
+.chips{display:flex;gap:7px;flex-wrap:wrap}.chip,.badge{border-radius:3px;padding:3px 8px;font-size:12px;background:#e9ece8;color:#34423e;border:1px solid #d5d9d3}.good{background:#e2f1e9;color:var(--good);border-color:#b8d8c8}.warn{background:#fff0d8;color:var(--warn);border-color:#e7ca99}.bad{background:#fde7e3;color:var(--bad);border-color:#e8bbb4}.reuse{background:#e4ebe9;color:#275b51}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:8px 14px}.kv b{color:#33413d}.value{white-space:pre-wrap;overflow-wrap:anywhere}.timeline{position:relative;margin-left:18px}.timeline:before{content:"";position:absolute;left:19px;top:28px;bottom:28px;width:2px;background:#b7c7bd}.stage{position:relative;margin:0 0 18px 58px;padding:20px}.stage:before{content:attr(data-n);position:absolute;left:-58px;top:20px;width:40px;height:40px;border-radius:4px;display:grid;place-items:center;background:var(--brand);color:white;font-weight:700;box-shadow:0 0 0 5px var(--bg)}.stage h3{margin:0 0 4px;font-size:19px}.stage-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}.stage-cell{border:1px solid var(--line);border-radius:6px;padding:11px;background:#fbfcf7}.stage-cell b{display:block;margin-bottom:4px;color:#344054}.handoff{margin-top:12px;padding:9px 12px;background:var(--soft);border-radius:5px}.fragment{margin-top:12px;border-left:4px solid var(--brand);padding:10px 12px;background:#edf5f2}.fragment h4{margin:0 0 5px}.why{margin-top:10px;padding:10px 12px;background:#fff4df;border-left:4px solid var(--accent)}
+table{width:100%;border-collapse:collapse;background:var(--card)}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#e9ece7;color:#34413d;font-size:13px}.scroll{overflow:auto;border:1px solid var(--line);border-radius:6px}.field-group{margin-bottom:20px}.gap{border-left:4px solid var(--bad);padding:10px 12px;background:#fff1ee;margin:8px 0}.evidence{font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace;font-size:12px;background:#eef0eb;border-radius:5px;padding:9px;margin:6px 0;overflow-wrap:anywhere}.empty{padding:18px;color:var(--muted);text-align:center;border:1px dashed var(--line);border-radius:6px}
+.scenario-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.scenario-card{display:block;color:inherit;transition:transform .18s ease,border-color .18s ease}.scenario-card:hover{text-decoration:none;border-color:#7eaa9f;transform:translate(-2px,-2px)}.scenario-card h2{font-size:20px}.footer{padding:30px;text-align:center;color:var(--muted)}select,button,input{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:white}button{background:var(--brand);color:#fff;border-color:var(--brand);cursor:pointer}.compare-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.overview-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.business-flow{counter-reset:block;display:grid;gap:16px}.business-block{scroll-margin-top:80px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:8px;padding:20px;box-shadow:4px 4px 0 #1c302b12;transition:border-color .2s ease,transform .2s ease}.business-block.focused{border-color:var(--accent);transform:translateX(3px)}.business-block.outline{border-left-color:#d1912c}.block-head{display:grid;grid-template-columns:48px 1fr auto;gap:13px;align-items:start}.block-number{width:42px;height:42px;border-radius:4px;background:var(--brand-dark);color:#fff;display:grid;place-items:center;font-weight:800}.block-head h2{margin:0 0 4px;font-size:22px}.block-why{margin:13px 0;padding:11px 13px;background:#fff3de;border-radius:5px;border-left:3px solid var(--accent)}.block-contract{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mini-panel{border:1px solid var(--line);border-radius:6px;padding:12px;background:#f7f8f3}.mini-panel b{display:block;color:#34413d;margin-bottom:5px}.business-steps{margin:14px 0 0;padding-left:24px}.business-steps li{margin:8px 0;padding-left:4px}.cross-cutting{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.technical-appendix{margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:6px;background:#f3f4ef}
+.cockpit-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:1px;margin-top:18px;background:var(--line);border:1px solid var(--line)}.metric{background:#f7f6f0;padding:12px}.metric span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}.metric strong{font-size:20px}.scenario-console{display:grid;grid-template-columns:230px minmax(520px,1fr) 320px;gap:16px;align-items:start}.flow-rail,.evidence-drawer{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:4px 4px 0 #1c302b12}.panel-title{padding:13px 14px;border-bottom:1px solid var(--line);background:#e8ebe6}.panel-title h3{margin:0;font-size:17px}.flow-nav{padding:8px}.block-nav{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;color:var(--ink);border-color:transparent;margin:2px 0}.block-nav:hover,.block-nav.active{background:var(--soft);border-color:#b6cec6}.block-nav .nav-index{font-family:"Bahnschrift SemiCondensed",sans-serif;color:var(--brand);font-weight:800}.story-canvas{min-width:0}.sequence-board{background:#17231f;color:#eef7f3;border-radius:8px;padding:16px;box-shadow:5px 5px 0 #ed6a3233;overflow:auto}.sequence-board h2{margin:0;color:#fff}.sequence-board .muted{color:#adc0b9}.sequence-board svg{display:block;min-width:720px;width:100%;height:auto;margin-top:14px}.sequence-step{cursor:pointer}.sequence-step:hover path,.sequence-step:hover line{stroke:#fff}.evidence-body{padding:14px}.evidence-body h3{margin:0 0 5px}.evidence-list{margin:12px 0;padding:0;list-style:none}.evidence-list li{padding:8px 0;border-bottom:1px solid var(--line)}.artifact-link{display:block;padding:9px;border:1px solid var(--line);border-radius:5px;margin:7px 0;background:#f6f7f2}.artifact-link:hover{border-color:var(--brand);text-decoration:none}.artifact-link code{display:block;color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.execution-workspace{display:grid;grid-template-columns:minmax(280px,34%) minmax(420px,1fr) minmax(280px,30%);gap:14px;align-items:start}.execution-panel{background:#fff;border:1px solid var(--line);border-radius:8px;min-width:0;overflow:hidden}.execution-panel>h3{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);background:#e9ece7}.panel-body{padding:12px;max-height:78vh;overflow:auto}.execution-tree,.execution-tree ul{list-style:none;margin:0;padding-left:15px}.execution-tree{padding-left:0}.tree-node{margin:5px 0}.tree-node>summary{cursor:pointer}.tree-leaf{margin:5px 0 5px 18px}.node-select,.field-select,.node-jump{width:100%;text-align:left;background:#fff;color:var(--ink);border-color:transparent;padding:6px 8px}.node-select:hover,.field-select:hover,.node-jump:hover{background:var(--soft);text-decoration:none}.node-select.active,.field-select.active{background:#dcece6;border-color:#9fbfb4;color:#153f36}.node-select.field-hit{box-shadow:inset 3px 0 var(--accent)}.node-type{display:inline-block;min-width:68px;margin-right:6px;color:var(--muted);font-size:11px;font-weight:700}.node-detail,.field-detail{display:none}.node-detail.active,.field-detail.active{display:block}.node-detail h2,.field-detail h3{margin-top:0}.detail-section{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.field-path{margin:8px 0;padding-left:20px}.field-path li{margin:7px 0}.field-meta{padding:9px;border:1px solid var(--line);border-radius:6px;margin-bottom:8px}.stage-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.stage-summary .card{box-shadow:none;padding:13px}.tree-note{font-size:12px;color:var(--muted);padding:8px 12px;background:#eef3ef;border-radius:5px;margin-bottom:10px}
+.artifact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}.artifact-shell{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px}.artifact-sidebar{position:sticky;top:72px;align-self:start}.artifact-meta{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}.artifact-viewer{background:#111916;color:#d9e8e2;border-radius:8px;min-height:620px;overflow:hidden}.artifact-toolbar{position:sticky;top:0;z-index:2;display:flex;gap:8px;padding:12px;background:#1b2a25;border-bottom:1px solid #385048}.artifact-toolbar input{flex:1;background:#f6f8f4}.json-tree{padding:16px;font:13px/1.65 "Cascadia Code",Consolas,monospace;overflow:auto}.json-tree details{margin-left:16px}.json-tree summary{cursor:pointer;color:#c5ddd4}.json-key{color:#8dd6c2}.json-string{color:#f3bd86}.json-number{color:#8eb9ff}.json-boolean{color:#e49be8}.json-null{color:#9ba7a3}.search-results{max-height:220px;overflow:auto}.search-hit{display:block;width:100%;text-align:left;background:#f4f6f1;color:var(--ink);border-color:transparent;margin:3px 0;font:12px/1.4 "Cascadia Code",Consolas,monospace}.search-hit:hover{border-color:var(--brand)}
+@media(max-width:1250px){.scenario-console{grid-template-columns:210px minmax(480px,1fr)}.evidence-drawer{position:relative;top:auto;grid-column:1/-1;max-height:none}.cockpit-metrics{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1100px){.execution-workspace{grid-template-columns:320px 1fr}.execution-panel.field-panel{grid-column:1/-1}.field-panel .panel-body{max-height:none;display:grid;grid-template-columns:260px 1fr;gap:12px}.artifact-shell{grid-template-columns:1fr}.artifact-sidebar{position:relative;top:auto}}
+@media(max-width:850px){.span4,.span6,.span8{grid-column:span 12}.stage-grid{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.wrap{padding:14px}.stage{margin-left:48px}.timeline{margin-left:0}.execution-workspace,.scenario-console{grid-template-columns:1fr}.flow-rail,.evidence-drawer{position:relative;top:auto;max-height:none}.flow-nav{display:grid;grid-template-columns:repeat(2,1fr)}.execution-panel.field-panel{grid-column:auto}.field-panel .panel-body{display:block}.panel-body{max-height:none}.cockpit-metrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:850px){.overview-grid,.cross-cutting,.block-contract{grid-template-columns:1fr}.block-head{grid-template-columns:42px 1fr}.block-head>.chips{grid-column:1/-1}}
 '''
 
@@ -41,9 +46,14 @@ def preview(value: Any, max_chars: int = 1200) -> str:
     return text if len(text) <= max_chars else text[:max_chars] + " … [memory-query 查看完整事实]"
 
 
+def short_text(value: Any, max_chars: int = 34) -> str:
+    text = json.dumps(value, ensure_ascii=False, separators=(",", ":")) if isinstance(value, (dict, list)) else str(value or "")
+    return text if len(text) <= max_chars else text[: max_chars - 1] + "…"
+
+
 def shell(title: str, body: str, relative_root: str = "") -> str:
     return f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)}</title><style>{CSS}</style></head><body>
-<nav class="top"><strong>UCEF</strong><a href="{relative_root}index.html">业务链路</a><a href="{relative_root}compare.html">横向对比</a><a href="{relative_root}memory.html">分析记忆</a></nav>
+<nav class="top"><strong>UCEF</strong><a href="{relative_root}index.html">业务链路</a><a href="{relative_root}compare.html">横向对比</a><a href="{relative_root}artifacts.html">原始制品</a><a href="{relative_root}memory.html">分析记忆</a></nav>
 <main class="wrap">{body}</main><footer class="footer">Generated from evidence-backed UCEF facts · source links are evidence, not the narrative</footer></body></html>'''
 
 
@@ -70,6 +80,7 @@ class DossierSiteBuilder:
         self.store = store
         self.config = config
         self.workspace_root = Path(workspace_root)
+        self.artifacts = ArtifactStore(self.workspace_root)
         output = (config.get("site") or {}).get("output", "site")
         self.output = (Path(output) if Path(output).is_absolute() else self.workspace_root / output).resolve()
         try:
@@ -80,7 +91,9 @@ class DossierSiteBuilder:
     def build(self) -> dict[str, Any]:
         self.output.mkdir(parents=True, exist_ok=True)
         scenario_dir = self.output / "scenarios"
+        artifact_dir = self.output / "artifacts"
         scenario_dir.mkdir(parents=True, exist_ok=True)
+        artifact_dir.mkdir(parents=True, exist_ok=True)
         scenarios = self.store.list_scenarios()
         dossiers = []
         for scenario in scenarios:
@@ -110,10 +123,67 @@ class DossierSiteBuilder:
             dossiers.append(dossier)
             target = scenario_dir / f"{safe_name(scenario_id)}.html"
             target.write_text(self._scenario_page(dossier), encoding="utf-8")
+        artifacts = self.artifacts.list_artifacts()
+        for artifact in artifacts:
+            target = artifact_dir / f"{safe_name(str(artifact.get('artifact_id')))}.html"
+            target.write_text(self._artifact_page(artifact), encoding="utf-8")
         (self.output / "index.html").write_text(self._index_page(dossiers), encoding="utf-8")
         (self.output / "compare.html").write_text(self._compare_page(dossiers), encoding="utf-8")
+        (self.output / "artifacts.html").write_text(self._artifacts_index_page(artifacts), encoding="utf-8")
         (self.output / "memory.html").write_text(self._memory_page(), encoding="utf-8")
-        return {"output": str(self.output), "scenarios": len(scenarios), "files": len(scenarios) + 3}
+        return {
+            "output": str(self.output),
+            "scenarios": len(scenarios),
+            "artifacts": len(artifacts),
+            "files": len(scenarios) + len(artifacts) + 4,
+        }
+
+    def _artifact_href(self, artifact: dict[str, Any], relative_root: str = "../") -> str:
+        artifact_id = safe_name(str(artifact.get("artifact_id") or "artifact"))
+        return f"{relative_root}artifacts/{artifact_id}.html"
+
+    def _artifacts_index_page(self, artifacts: list[dict[str, Any]]) -> str:
+        cards = []
+        for artifact in artifacts:
+            cards.append(f'''<a class="card scenario-card" href="{self._artifact_href(artifact, '')}"><div class="chips"><span class="chip">{esc(artifact.get('kind'))}</span>{badge(artifact.get('redaction_status'))}</div><h2>{esc(artifact.get('artifact_id'))}</h2><p>{esc(artifact.get('source_id') or '非代码配置来源')}</p><div class="muted">{esc(artifact.get('environment'))} · {esc(artifact.get('snapshot_id'))}</div><div class="chips" style="margin-top:12px"><span class="chip">{esc(artifact.get('size_bytes'))} bytes</span><span class="chip">{esc(artifact.get('redacted_value_count'))} 项脱敏</span><span class="chip">{esc(len(artifact.get('scenario_ids') or []))} 个场景</span></div></a>''')
+        body = f'''<section class="hero"><div class="section-kicker">Evidence vault</div><h1>原始制品库</h1><p class="muted">配置 JSON 以内容哈希登记，站点只展示脱敏快照。制品独立加载，不进入 Scenario 主页面或模型上下文。</p></section><section class="section artifact-grid">{''.join(cards) if cards else '<div class="empty">尚未登记原始 JSON 制品。使用 artifact-add 添加配置快照。</div>'}</section>'''
+        return shell("UCEF 原始制品库", body)
+
+    def _artifact_page(self, artifact: dict[str, Any]) -> str:
+        data = json.dumps(
+            self.artifacts.read_display_json(artifact),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).replace("<", "\\u003c")
+        metadata = kv_rows([
+            ("制品 ID", artifact.get("artifact_id")),
+            ("类型", artifact.get("kind")),
+            ("数据源", artifact.get("source_id")),
+            ("环境", artifact.get("environment")),
+            ("快照", artifact.get("snapshot_id")),
+            ("关联场景", artifact.get("scenario_ids")),
+            ("原始大小", f"{artifact.get('size_bytes')} bytes"),
+            ("原始 SHA-256", artifact.get("content_hash")),
+            ("展示 SHA-256", artifact.get("display_hash")),
+            ("脱敏", f"{artifact.get('redaction_status')} · {artifact.get('redacted_value_count')} 项"),
+            ("采集时间", artifact.get("captured_at")),
+            ("来源位置", artifact.get("source_path")),
+        ])
+        viewer = '''<div class="artifact-viewer"><div class="artifact-toolbar"><input id="artifact-search" type="search" placeholder="搜索 JSON Pointer、键或值"><button id="artifact-download">下载脱敏快照</button></div><div id="artifact-results" class="search-results"></div><div id="json-tree" class="json-tree"></div></div>
+<script type="application/json" id="artifact-data">__DATA__</script>
+<script>
+const ARTIFACT_DATA=JSON.parse(document.getElementById('artifact-data').textContent);
+const tree=document.getElementById('json-tree'),results=document.getElementById('artifact-results'),search=document.getElementById('artifact-search');
+const pointerKey=k=>String(k).replace(/~/g,'~0').split('/').join('~1');
+function primitive(value){const span=document.createElement('span');span.className=value===null?'json-null':typeof value==='string'?'json-string':typeof value==='number'?'json-number':typeof value==='boolean'?'json-boolean':'';span.textContent=value===null?'null':typeof value==='string'?JSON.stringify(value):String(value);return span}
+function makeNode(value,key,path,depth){const wrap=document.createElement('div');if(value===null||typeof value!=='object'){if(key!==null){const label=document.createElement('span');label.className='json-key';label.textContent=JSON.stringify(String(key))+': ';wrap.append(label)}wrap.append(primitive(value));return wrap}const details=document.createElement('details');details.dataset.pointer=path;if(depth<2)details.open=true;const summary=document.createElement('summary');const label=key===null?'root':String(key);summary.textContent=`${label} ${Array.isArray(value)?`[${value.length}]`:`{${Object.keys(value).length}}`}`;details.append(summary);let loaded=false;const load=()=>{if(loaded)return;loaded=true;for(const [childKey,child] of Object.entries(value)){const childPath=path+'/'+pointerKey(childKey);details.append(makeNode(child,childKey,childPath,depth+1))}};details.addEventListener('toggle',()=>{if(details.open)load()});if(details.open)load();wrap.append(details);return wrap}
+function walk(value,path,query,hits){if(hits.length>=200)return;if(value!==null&&typeof value==='object'){for(const [key,child] of Object.entries(value)){const next=path+'/'+pointerKey(key);if((key+' '+next).toLowerCase().includes(query))hits.push([next,child]);walk(child,next,query,hits);if(hits.length>=200)return}}else if((path+' '+String(value)).toLowerCase().includes(query)){hits.push([path,value])}}
+function showHits(){const query=search.value.trim().toLowerCase();results.replaceChildren();if(!query)return;const hits=[];walk(ARTIFACT_DATA,'',query,hits);for(const [path,value] of hits){const button=document.createElement('button');button.className='search-hit';button.textContent=path+' = '+(typeof value==='object'?JSON.stringify(value).slice(0,120):String(value));button.onclick=()=>{search.value=path;showHits()};results.append(button)}if(!hits.length)results.textContent='没有匹配路径或值。'}
+tree.append(makeNode(ARTIFACT_DATA,null,'',0));search.addEventListener('input',showHits);const pointer=new URLSearchParams(location.hash.slice(1)).get('pointer');if(pointer){search.value=pointer;showHits()}
+document.getElementById('artifact-download').onclick=()=>{const blob=new Blob([JSON.stringify(ARTIFACT_DATA,null,2)+'\\n'],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='artifact-redacted.json';a.click();URL.revokeObjectURL(url)};
+</script>'''.replace("__DATA__", data)
+        body = f'''<section class="hero"><div class="section-kicker">Content-addressed evidence</div><div class="chips"><span class="chip">{esc(artifact.get('kind'))}</span>{badge(artifact.get('redaction_status'))}</div><h1>{esc(artifact.get('artifact_id'))}</h1><p>独立加载的配置证据页面；主链路只保存引用和 JSON Pointer。</p></section><section class="section artifact-shell"><aside class="artifact-sidebar"><div class="artifact-meta"><h2>制品信息</h2>{metadata}</div></aside>{viewer}</section>'''
+        return shell(str(artifact.get("artifact_id")), body, "../")
 
     def _memory_page(self) -> str:
         cards = []
@@ -185,6 +255,133 @@ class DossierSiteBuilder:
 
         return shell(str(scenario.get("name")), hero + stages + implementation + execution + fields + persistence_section + external_section + gaps, "../")
 
+    def _sequence_diagram(
+        self,
+        scenario: dict[str, Any],
+        blocks: list[dict[str, Any]],
+        plan: dict[str, Any],
+    ) -> str:
+        scope = scenario.get("scope") or {}
+        trigger = scenario.get("trigger") or {}
+        service_label = str(
+            ((scope.get("source_ids") or [None])[0])
+            or str(trigger.get("symbol") or "业务服务").split("#", 1)[0]
+        )
+        raw_messages: list[dict[str, Any]] = [{
+            "from": "调用方",
+            "to": service_label,
+            "label": trigger.get("symbol") or scenario.get("business_operation") or "发起请求",
+            "kind": "request",
+            "block_id": "",
+        }]
+        boundary_labels: list[str] = []
+
+        def add_boundary(label: Any) -> str:
+            value = str(label or "未命名边界")
+            if value not in boundary_labels:
+                boundary_labels.append(value)
+            return value
+
+        for block in blocks:
+            block_id = str(block.get("block_id") or "")
+            external = block.get("external_calls") or []
+            persistence = block.get("persistence") or []
+            if not external and not persistence:
+                raw_messages.append({
+                    "from": service_label,
+                    "to": service_label,
+                    "label": f"{block.get('sequence_no')} · {block.get('title')}",
+                    "kind": "internal",
+                    "block_id": block_id,
+                })
+            for interaction in external:
+                target = add_boundary(interaction.get("system") or interaction.get("target_system"))
+                raw_messages.append({
+                    "from": service_label,
+                    "to": target,
+                    "label": f"{block.get('title')} · {interaction.get('operation') or '调用'}",
+                    "kind": "request",
+                    "block_id": block_id,
+                })
+                raw_messages.append({
+                    "from": target,
+                    "to": service_label,
+                    "label": interaction.get("response") or "返回结果",
+                    "kind": "response",
+                    "block_id": block_id,
+                })
+            for effect in persistence:
+                target = add_boundary(effect.get("store") or effect.get("table") or "数据存储")
+                raw_messages.append({
+                    "from": service_label,
+                    "to": target,
+                    "label": f"{block.get('title')} · {effect.get('operation') or '写入'}",
+                    "kind": "persistence",
+                    "block_id": block_id,
+                })
+        raw_messages.append({
+            "from": service_label,
+            "to": "调用方",
+            "label": plan.get("terminal_outcome") or scenario.get("expected_outcome") or "返回业务结果",
+            "kind": "response",
+            "block_id": "",
+        })
+
+        visible_boundaries = boundary_labels[:5]
+        collapsed = len(boundary_labels) > len(visible_boundaries)
+        participants = list(dict.fromkeys(
+            ["调用方", service_label] + visible_boundaries + (["其他边界"] if collapsed else [])
+        ))
+
+        def visible_target(label: str) -> str:
+            if label in participants:
+                return label
+            return "其他边界" if collapsed else label
+
+        messages = [
+            {**message, "from": visible_target(str(message["from"])), "to": visible_target(str(message["to"]))}
+            for message in raw_messages[:20]
+        ]
+        if len(raw_messages) > 20:
+            messages.append({
+                "from": service_label,
+                "to": service_label,
+                "label": f"另有 {len(raw_messages) - 20} 条交互在业务块中展开",
+                "kind": "internal",
+                "block_id": "",
+            })
+
+        width = max(760, 120 + 155 * (len(participants) - 1))
+        height = 112 + 58 * len(messages)
+        xs = {
+            label: 60 + index * ((width - 120) / max(1, len(participants) - 1))
+            for index, label in enumerate(participants)
+        }
+        parts = [
+            f'''<svg viewBox="0 0 {width} {height}" role="img" aria-label="业务时序图"><defs><marker id="ucef-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#f2b37e"/></marker></defs>'''
+        ]
+        for label, x in xs.items():
+            parts.append(f'''<rect x="{x - 58:.1f}" y="8" width="116" height="36" rx="4" fill="#e8f2ed" stroke="#74a697"/><text x="{x:.1f}" y="31" text-anchor="middle" fill="#173f36" font-size="12" font-weight="700">{esc(short_text(label, 18))}</text><line x1="{x:.1f}" y1="44" x2="{x:.1f}" y2="{height - 24}" stroke="#69847c" stroke-width="1" stroke-dasharray="5 5"/>''')
+        for index, message in enumerate(messages):
+            y = 76 + index * 58
+            source_x = xs[str(message["from"])]
+            target_x = xs[str(message["to"])]
+            block_id = esc(message.get("block_id") or "")
+            css_class = "sequence-step" if message.get("block_id") else "sequence-message"
+            label = esc(short_text(message.get("label"), 42))
+            if source_x == target_x:
+                loop_direction = 1 if source_x < width - 320 else -1
+                box_x = source_x + 54 if loop_direction > 0 else source_x - 304
+                text_x = box_x + 10
+                parts.append(f'''<g class="{css_class}" data-block="{block_id}" tabindex="0"><path d="M {source_x:.1f} {y} h {46 * loop_direction} v 23 h {-46 * loop_direction}" fill="none" stroke="#f2b37e" stroke-width="1.6" marker-end="url(#ucef-arrow)"/><rect x="{box_x:.1f}" y="{y - 11}" width="250" height="24" rx="4" fill="#21332d" stroke="#49675e"/><text x="{text_x:.1f}" y="{y + 5}" fill="#e9f1ee" font-size="11">{label}</text></g>''')
+            else:
+                direction = 1 if target_x > source_x else -1
+                dash = ' stroke-dasharray="5 4"' if message.get("kind") == "response" else ""
+                text_x = (source_x + target_x) / 2
+                parts.append(f'''<g class="{css_class}" data-block="{block_id}" tabindex="0"><line x1="{source_x + 8 * direction:.1f}" y1="{y}" x2="{target_x - 8 * direction:.1f}" y2="{y}" stroke="#f2b37e" stroke-width="1.6"{dash} marker-end="url(#ucef-arrow)"/><rect x="{text_x - 112:.1f}" y="{y - 24}" width="224" height="19" rx="3" fill="#17231f"/><text x="{text_x:.1f}" y="{y - 10}" text-anchor="middle" fill="#e8f1ed" font-size="10.5">{label}</text></g>''')
+        parts.append("</svg>")
+        return "".join(parts)
+
     def _direct_scenario_page(self, dossier: dict[str, Any]) -> str:
         scenario = dossier["scenario"]
         overview = (dossier.get("scenario_overviews") or [{}])[-1]
@@ -195,11 +392,16 @@ class DossierSiteBuilder:
         trigger = scenario.get("trigger") or {}
         one_sentence = overview.get("one_sentence") or scenario.get("business_goal") or "业务骨架正在形成"
         selected_route = overview.get("selected_route") or "尚未完成最终选路总结"
-        hero = f'''<section class="hero"><div class="chips">{badge(overview.get('status') or run.get('status') or 'ANALYZING')}<span class="chip">{esc(scenario.get('scenario_id'))}</span><span class="chip">{esc(run.get('mode') or 'DIRECT')}</span></div><h1>{esc(scenario.get('name'))}</h1><p>{esc(one_sentence)}</p></section>
-<section class="section overview-grid"><div class="card"><h2>这条链路解决什么问题</h2><p>{esc(overview.get('business_context') or scenario.get('business_goal'))}</p>{kv_rows([('入口',trigger.get('symbol')),('输入',trigger.get('input_type')),('适用环境',scope.get('environment')),('请求约束',scope.get('request_constraints'))])}</div><div class="card"><h2>当前选路与结果</h2>{kv_rows([('选路',selected_route),('终点',plan.get('terminal_outcome') or scenario.get('expected_outcome')),('关键字段',plan.get('critical_fields')),('完成进度',f"{len([x for x in blocks if x.get('status') in {'COMPLETE','SUMMARY_COMPLETE'}])}/{len(blocks)}")])}</div></section>'''
+        completed_count = len([x for x in blocks if x.get("status") in {"COMPLETE", "SUMMARY_COMPLETE"}])
+        open_gaps = list(overview.get("open_gaps") or []) + [x for x in dossier.get("gaps") or [] if x.get("status", "OPEN") == "OPEN"]
+        artifacts = self.artifacts.list_artifacts(str(scenario.get("scenario_id")))
+        hero = f'''<section class="hero"><div class="section-kicker">Scenario control room</div><div class="chips">{badge(overview.get('status') or run.get('status') or 'ANALYZING')}<span class="chip">{esc(scenario.get('scenario_id'))}</span><span class="chip">{esc(run.get('mode') or 'DIRECT')}</span></div><h1>{esc(scenario.get('name'))}</h1><p>{esc(one_sentence)}</p><div class="cockpit-metrics"><div class="metric"><span>环境</span><strong>{esc(scope.get('environment'))}</strong></div><div class="metric"><span>当前选路</span><strong>{esc(short_text(selected_route, 24))}</strong></div><div class="metric"><span>业务块</span><strong>{completed_count}/{len(blocks)}</strong></div><div class="metric"><span>P0 字段</span><strong>{esc(len(plan.get('critical_fields') or []))}</strong></div><div class="metric"><span>Gap / 制品</span><strong>{len(open_gaps)} / {len(artifacts)}</strong></div></div></section>'''
 
+        nav = "".join(f'''<button class="block-nav" data-block="{esc(block.get('block_id'))}"><span class="nav-index">{index:02d}</span><span>{esc(block.get('title'))}</span></button>''' for index, block in enumerate(blocks, start=1))
         block_html = "".join(self._business_block_card(index, block) for index, block in enumerate(blocks, start=1))
-        journey = f'''<section class="section"><div class="section-title"><h2>业务执行过程</h2><span class="muted">业务解释默认展开；方法和源码只在证据附录中出现</span></div><div class="business-flow">{block_html}</div></section>'''
+        sequence = self._sequence_diagram(scenario, blocks, plan)
+        artifact_links = "".join(f'''<a class="artifact-link" href="{self._artifact_href(item)}"><b>{esc(item.get('kind'))}</b><code>{esc(item.get('artifact_id'))} · {esc(item.get('environment'))}</code></a>''' for item in artifacts)
+        console = f'''<section class="section scenario-console"><aside class="flow-rail"><div class="panel-title"><div class="section-kicker">Business spine</div><h3>业务链路导航</h3></div><div class="flow-nav">{nav or '<div class="empty">尚无业务块</div>'}</div></aside><main class="story-canvas"><div class="sequence-board"><div class="section-kicker">Deterministic projection</div><h2>业务时序图</h2><p class="muted">由 BusinessBlock、外部调用和持久化事实自动生成；点击交互定位业务块。</p>{sequence}</div><section class="section"><div class="section-title"><div><div class="section-kicker">Narrative</div><h2>业务执行过程</h2></div><span class="muted">业务解释默认展开，技术证据按需查看</span></div><div class="business-flow">{block_html}</div></section></main><aside class="evidence-drawer"><div class="panel-title"><div class="section-kicker">Evidence drawer</div><h3 id="drawer-title">选择业务块</h3></div><div class="evidence-body"><p id="drawer-why" class="muted">点击左侧步骤或时序图消息查看当前依据。</p><div id="drawer-decision"></div><h4>方法与证据</h4><ul id="drawer-methods" class="evidence-list"></ul><div id="drawer-refs" class="evidence"></div><h4>场景原始制品</h4>{artifact_links or '<div class="empty">尚未登记配置 JSON。</div>'}</div></aside></section>'''
 
         field_rows = []
         for item in overview.get("key_field_journeys") or []:
@@ -209,14 +411,37 @@ class DossierSiteBuilder:
         failure_rows = [[item.get("condition") or item.get("name"), item.get("behavior"), item.get("business_outcome")] for item in overview.get("failure_outcomes") or []]
         cross = f'''<section class="section cross-cutting"><div class="card"><h2>字段如何走完整条链（P0）</h2>{table(['字段','来源','变化过程','终点','业务用途'],field_rows)}</div><div class="card"><h2>外部系统与业务副作用</h2>{table(['系统','操作','请求来源','响应用途','业务效果'],external_rows)}</div><div class="card"><h2>持久化结果</h2>{table(['存储','动作','字段映射','业务效果'],persistence_rows)}</div><div class="card"><h2>失败与降级</h2>{table(['条件','系统行为','业务结果'],failure_rows)}</div></section>'''
 
-        open_gaps = list(overview.get("open_gaps") or []) + [x for x in dossier.get("gaps") or [] if x.get("status", "OPEN") == "OPEN"]
         gaps = f'''<section class="section"><div class="section-title"><h2>明确未解决的问题</h2><span class="muted">达到预算后保留为 Gap，不自动继续挖掘</span></div>{''.join(f'<div class="gap">{esc(item.get("question") if isinstance(item,dict) else item)}</div>' for item in open_gaps) if open_gaps else '<div class="card">当前没有开放 Gap。</div>'}</section>'''
 
         legacy_evidence = ""
         if dossier.get("execution_nodes"):
             legacy_evidence = f'''<details><summary><b>旧版完整方法树与字段联动</b></summary><div style="margin-top:12px">{self._execution_workspace(dossier)}</div></details>'''
         appendix = f'''<section class="section"><details><summary><b>技术证据附录</b>（方法、源码、配置位置，默认折叠）</summary><div class="technical-appendix">{''.join(self._block_evidence(block) for block in blocks)}{legacy_evidence}</div></details></section>'''
-        return shell(str(scenario.get("name")), hero + journey + cross + gaps + appendix, "../")
+        drawer_data = {
+            str(block.get("block_id")): {
+                "title": block.get("title"),
+                "why": block.get("why_current"),
+                "decision": block.get("decision"),
+                "status": block.get("status"),
+                "methods": [
+                    {
+                        "symbol": item.get("symbol"),
+                        "location": item.get("location") or f"{item.get('source_id') or ''}:{item.get('file') or ''}:{item.get('lines') or ''}",
+                        "purpose": item.get("purpose") or item.get("role"),
+                    }
+                    for item in block.get("method_evidence") or []
+                ],
+                "refs": block.get("evidence_refs") or [],
+            }
+            for block in blocks
+        }
+        drawer_json = json.dumps(drawer_data, ensure_ascii=False).replace("</", "<\\/")
+        first_block = str(blocks[0].get("block_id")) if blocks else ""
+        script = '''<script>const UCEF_BLOCKS=__DATA__,firstBlock=__FIRST__;
+const text=(el,value)=>{el.textContent=value==null?'—':typeof value==='string'?value:JSON.stringify(value,null,2)};
+function selectBusinessBlock(id,shouldScroll=false){const data=UCEF_BLOCKS[id];if(!data)return;document.querySelectorAll('.block-nav').forEach(x=>x.classList.toggle('active',x.dataset.block===id));document.querySelectorAll('.business-block').forEach(x=>x.classList.toggle('focused',x.dataset.block===id));text(document.getElementById('drawer-title'),data.title);text(document.getElementById('drawer-why'),data.why);text(document.getElementById('drawer-decision'),data.decision);text(document.getElementById('drawer-refs'),data.refs);const methods=document.getElementById('drawer-methods');methods.replaceChildren();for(const method of data.methods||[]){const li=document.createElement('li'),strong=document.createElement('strong'),small=document.createElement('div');strong.textContent=method.symbol||'未命名方法';small.className='muted';small.textContent=(method.location||'')+' · '+(method.purpose||'');li.append(strong,small);methods.append(li)}if(!(data.methods||[]).length)methods.textContent='当前业务块没有方法证据。';if(shouldScroll)document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'})}
+document.querySelectorAll('.block-nav').forEach(x=>x.addEventListener('click',()=>selectBusinessBlock(x.dataset.block,true)));document.querySelectorAll('.sequence-step').forEach(x=>{const activate=()=>selectBusinessBlock(x.dataset.block,true);x.addEventListener('click',activate);x.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')activate()})});selectBusinessBlock(firstBlock);</script>'''.replace("__DATA__", drawer_json).replace("__FIRST__", json.dumps(first_block, ensure_ascii=False))
+        return shell(str(scenario.get("name")), hero + console + cross + gaps + appendix + script, "../")
 
     def _business_block_card(self, index: int, block: dict[str, Any]) -> str:
         status = str(block.get("status") or "OUTLINE")
@@ -235,7 +460,8 @@ class DossierSiteBuilder:
             details = f'''<details class="detail-section"><summary><b>字段、外部接口与落库细节</b></summary><div style="margin-top:10px"><h4>字段变化</h4>{table(['字段','来源','转换','去向','业务用途'],field_rows)}<h4>外部交互</h4>{table(['系统','操作','请求','响应','业务效果'],external_rows)}<h4>持久化</h4>{table(['存储','动作','映射','业务效果'],persist_rows)}</div></details>'''
         reuse = block.get("reuse") or {}
         reuse_chip = f'<span class="badge reuse">{esc(reuse.get("decision"))}</span>' if reuse.get("decision") else ""
-        return f'''<article class="business-block {'outline' if status == 'OUTLINE' else ''}"><div class="block-head"><div class="block-number">{index}</div><div><h2>{esc(block.get('title'))}</h2><p>{esc(block.get('business_goal'))}</p></div><div class="chips"><span class="chip">{esc(block.get('depth'))}</span>{reuse_chip}{badge(status)}</div></div><div class="block-why"><b>为什么执行：</b>{esc(block.get('why_current'))}</div><div class="block-contract"><div class="mini-panel"><b>收到什么</b>{esc(inputs)}</div><div class="mini-panel"><b>关键判断</b>{esc(decision)}</div><div class="mini-panel"><b>产生什么</b>{esc(block.get('output'))}</div></div>{f'<ol class="business-steps">{step_html}</ol>' if step_html else '<div class="empty" style="margin-top:12px">实现细节尚未提交，当前先展示业务骨架。</div>'}{f'<div class="muted" style="margin-top:10px">复用依据：{esc(reuse.get("basis"))}</div>' if reuse.get('basis') else ''}{details}</article>'''
+        block_id = str(block.get("block_id") or f"block-{index}")
+        return f'''<article id="{esc(block_id)}" data-block="{esc(block_id)}" class="business-block {'outline' if status == 'OUTLINE' else ''}"><div class="block-head"><div class="block-number">{index}</div><div><h2>{esc(block.get('title'))}</h2><p>{esc(block.get('business_goal'))}</p></div><div class="chips"><span class="chip">{esc(block.get('depth'))}</span>{reuse_chip}{badge(status)}</div></div><div class="block-why"><b>为什么执行：</b>{esc(block.get('why_current'))}</div><div class="block-contract"><div class="mini-panel"><b>收到什么</b>{esc(inputs)}</div><div class="mini-panel"><b>关键判断</b>{esc(decision)}</div><div class="mini-panel"><b>产生什么</b>{esc(block.get('output'))}</div></div>{f'<ol class="business-steps">{step_html}</ol>' if step_html else '<div class="empty" style="margin-top:12px">实现细节尚未提交，当前先展示业务骨架。</div>'}{f'<div class="muted" style="margin-top:10px">复用依据：{esc(reuse.get("basis"))}</div>' if reuse.get('basis') else ''}{details}</article>'''
 
     def _block_evidence(self, block: dict[str, Any]) -> str:
         methods = block.get("method_evidence") or []
@@ -419,7 +645,14 @@ ucefSelectNode({json.dumps(first_node, ensure_ascii=False)});ucefSelectField({js
             location = f"{source_name}:{source.get('file') or source.get('key') or ''}:{source.get('line_start') or ''}"
         else:
             location = str(source)
-        return f'<div class="evidence"><b>{esc(evidence_id)}</b> · {esc(evidence.get("evidence_kind"))}<br>{esc(location)}<br>{esc(evidence.get("observation"))}</div>'
+        artifact_id = evidence.get("artifact_id") or (source.get("artifact_id") if isinstance(source, dict) else None)
+        locator = evidence.get("locator") or {}
+        selector = locator.get("selector") if isinstance(locator, dict) else None
+        artifact_link = ""
+        if artifact_id:
+            suffix = f"#pointer={quote(str(selector), safe='')}" if selector else ""
+            artifact_link = f'''<br><a href="../artifacts/{safe_name(str(artifact_id))}.html{suffix}">打开原始制品{f' · {esc(selector)}' if selector else ''}</a>'''
+        return f'<div class="evidence"><b>{esc(evidence_id)}</b> · {esc(evidence.get("evidence_kind"))}<br>{esc(location)}<br>{esc(evidence.get("observation"))}{artifact_link}</div>'
 
     def _external_card(self, item: dict[str, Any]) -> str:
         request = [[x.get("external_name"), x.get("internal_origin"), x.get("transformation"), x.get("business_use")] for x in item.get("request_params") or []]

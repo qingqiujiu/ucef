@@ -18,6 +18,7 @@ AGENT_PATH = PACKAGE_ROOT / ".opencode" / "agents" / "ucef-java-chain.md"
 sys.path.insert(0, str(SKILL_ROOT / "runtime"))
 
 from ucef.audit import audit_scenario
+from ucef.artifacts import ArtifactStore
 from ucef.cli import main as cli_main
 from ucef.compare import compare_scenarios
 from ucef.context import ContextBuilder
@@ -405,10 +406,32 @@ class DirectAnalysisTests(unittest.TestCase):
         self.assertEqual("COMPLETE", self.service.status(run_id)["run"]["status"])
         self.assertEqual("ALREADY_ACCEPTED", self.service.submit("overview", run_id, finalizer["task"]["task_id"], overview)["status"])
 
-        DossierSiteBuilder(self.store, {"site": {"output": "site"}}, self.root).build()
+        config_path = self.root / "payment-prod.json"
+        config_path.write_text(json.dumps({
+            "payment": {"mode": "PREPAID", "clientSecret": "do-not-render"},
+            "timeoutMs": 1500,
+            "label": "</SCRIPT><script>alert('unsafe')</script>",
+        }), encoding="utf-8")
+        artifact = ArtifactStore(self.root).add_json(
+            config_path,
+            scenario_id="SCN-DEMO-PREPAID",
+            source_id="order-service",
+            environment="PROD",
+            snapshot_id="CFG-PROD-001",
+        )
+
+        site_result = DossierSiteBuilder(self.store, {"site": {"output": "site"}}, self.root).build()
+        self.assertEqual(1, site_result["artifacts"])
         page = (self.root / "site" / "scenarios" / "SCN-DEMO-PREPAID.html").read_text(encoding="utf-8")
-        for expected in ("请求按生产配置选择预付通道", "业务执行过程", "字段如何走完整条链", "外部系统与业务副作用", "技术证据附录", "读取并转换金额"):
+        for expected in ("请求按生产配置选择预付通道", "业务执行过程", "业务时序图", "业务链路导航", "Evidence drawer", "字段如何走完整条链", "外部系统与业务副作用", "技术证据附录", "读取并转换金额", artifact["artifact_id"]):
             self.assertIn(expected, page)
+        self.assertIn('class="sequence-step"', page)
+        artifact_page = (self.root / "site" / "artifacts" / f"{artifact['artifact_id']}.html").read_text(encoding="utf-8")
+        self.assertIn("原始制品", artifact_page)
+        self.assertIn("***REDACTED***", artifact_page)
+        self.assertNotIn("do-not-render", artifact_page)
+        self.assertNotIn("</SCRIPT><script>", artifact_page)
+        self.assertIn("\\u003c/SCRIPT>", artifact_page)
         index = (self.root / "site" / "index.html").read_text(encoding="utf-8")
         self.assertIn("READABLE_COMPLETE", index)
 
@@ -700,6 +723,30 @@ class IndependentWorkspaceTests(unittest.TestCase):
     def test_workspace_artifact_path_cannot_escape(self):
         with self.assertRaisesRegex(ValueError, "must stay inside workspace"):
             self.workspace.resolve("../leaked.db")
+
+    def test_cli_registers_redacted_json_artifact_and_builds_independent_page(self):
+        source = self.workspace_root / "payment-prod.json"
+        source.write_text(json.dumps({
+            "payment": {"mode": "PREPAID", "token": "private-token"},
+            "timeout": 1500,
+        }), encoding="utf-8")
+        output = io.StringIO()
+        with redirect_stdout(output):
+            result = cli_main([
+                "--workspace", str(self.workspace_root),
+                "artifact-add", "--file", "payment-prod.json",
+                "--scenario", "SCN-PAY", "--source-id", "order-core",
+                "--environment", "PROD", "--snapshot", "CFG-2026-08-25",
+            ])
+        self.assertEqual(0, result)
+        receipt = json.loads(output.getvalue())
+        artifact_id = receipt["artifact"]["artifact_id"]
+        self.assertEqual("REDACTED", receipt["artifact"]["redaction_status"])
+        page = self.workspace_root / "site" / "artifacts" / f"{artifact_id}.html"
+        self.assertTrue(page.exists())
+        content = page.read_text(encoding="utf-8")
+        self.assertIn("***REDACTED***", content)
+        self.assertNotIn("private-token", content)
 
     def test_cli_writes_only_to_explicit_workspace_from_arbitrary_cwd(self):
         original_cwd = Path.cwd()

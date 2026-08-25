@@ -58,6 +58,16 @@
         "evidence_kind": {"enum": ["SOURCE", "CONFIG", "BUILD", "TEST", "RUNTIME", "DATABASE_METADATA", "EXTERNAL_CONTRACT"]},
         "source": {"oneOf": [{"type": "string"}, {"type": "object"}]},
         "observation": {"type": "string"},
+        "artifact_id": {"type": "string", "pattern": "^ART-"},
+        "locator": {
+          "type": "object",
+          "properties": {
+            "selector_type": {"enum": ["JSON_POINTER", "LINE_RANGE", "KEY", "QUERY"]},
+            "selector": {"type": "string"},
+            "excerpt_hash": {"type": "string"}
+          },
+          "additionalProperties": true
+        },
         "observation_ids": {"$ref": "#/$defs/ObservationIds"}
       },
       "additionalProperties": true

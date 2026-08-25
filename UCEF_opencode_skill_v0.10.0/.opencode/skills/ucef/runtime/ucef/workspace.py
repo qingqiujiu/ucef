@@ -151,6 +151,7 @@ class AnalysisWorkspace:
             "work_units/completed",
             "contexts",
             "runs",
+            "artifacts/objects",
             "site",
         ):
             self.resolve(relative).mkdir(parents=True, exist_ok=True)

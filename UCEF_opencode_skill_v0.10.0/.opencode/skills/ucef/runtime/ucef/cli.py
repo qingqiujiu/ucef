@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from .artifacts import ArtifactStore
 from .audit import audit_scenario
 from .compare import compare_scenarios
 from .context import ContextBuilder
@@ -71,6 +72,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 def cmd_init(args: argparse.Namespace) -> int:
     workspace = open_workspace(args)
     workspace.initialize_directories()
+    ArtifactStore(workspace.root).initialize()
     store = make_store(workspace)
     store.close()
     emit({"status": "initialized", **workspace.summary()})
@@ -330,6 +332,36 @@ def cmd_source_add(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_artifact_add(args: argparse.Namespace) -> int:
+    workspace = open_workspace(args)
+    source_path = Path(args.file).expanduser()
+    if not source_path.is_absolute():
+        source_path = workspace.resolve(args.file)
+    artifact = ArtifactStore(workspace.root).add_json(
+        source_path,
+        scenario_id=args.scenario,
+        source_id=args.source_id,
+        environment=args.environment,
+        snapshot_id=args.snapshot,
+        kind=args.kind,
+        extra_redact_keys=set(args.redact_key or []),
+    )
+    store = make_store(workspace)
+    try:
+        site = DossierSiteBuilder(store, workspace.config, workspace.root).build()
+    finally:
+        store.close()
+    emit({"status": "registered", "artifact": artifact, "site": site})
+    return 0
+
+
+def cmd_artifact_list(args: argparse.Namespace) -> int:
+    workspace = open_workspace(args)
+    artifacts = ArtifactStore(workspace.root).list_artifacts(args.scenario)
+    emit({"workspace": str(workspace.root), "count": len(artifacts), "artifacts": artifacts})
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ucef", description="UCEF business execution dossier runtime")
     parser.add_argument(
@@ -451,6 +483,20 @@ def build_parser() -> argparse.ArgumentParser:
     command.add_argument("--revision")
     command.add_argument("--role")
     command.set_defaults(func=cmd_source_add)
+
+    command = sub.add_parser("artifact-add")
+    command.add_argument("--file", required=True, help="UTF-8 JSON file; copied as a redacted content-addressed snapshot")
+    command.add_argument("--scenario")
+    command.add_argument("--source-id")
+    command.add_argument("--environment")
+    command.add_argument("--snapshot")
+    command.add_argument("--kind", default="CONFIG_JSON")
+    command.add_argument("--redact-key", action="append", help="Additional exact JSON key to redact; may be repeated")
+    command.set_defaults(func=cmd_artifact_add)
+
+    command = sub.add_parser("artifact-list")
+    command.add_argument("--scenario")
+    command.set_defaults(func=cmd_artifact_list)
     return parser
 
 
