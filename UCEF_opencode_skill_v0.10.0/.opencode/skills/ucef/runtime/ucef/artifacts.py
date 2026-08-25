@@ -92,9 +92,9 @@ class ArtifactStore:
             raise FileNotFoundError(f"Artifact source does not exist: {source}")
         raw = source.read_bytes()
         try:
-            parsed = json.loads(raw.decode("utf-8"))
+            parsed = json.loads(raw.decode("utf-8-sig"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ValueError(f"Artifact must be UTF-8 JSON: {source}") from exc
+            raise ValueError(f"Artifact must be UTF-8 JSON (optional BOM): {source}") from exc
 
         display_value, redacted_count = _redact_json(parsed, extra_redact_keys)
         display_text = json.dumps(display_value, ensure_ascii=False, indent=2) + "\n"

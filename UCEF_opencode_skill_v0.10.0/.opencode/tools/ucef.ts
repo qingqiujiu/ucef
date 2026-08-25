@@ -21,15 +21,29 @@ async function invoke(
   const python = process.env.UCEF_PYTHON || "python"
   const proc = Bun.spawn(
     [python, script, "--workspace", workspace, ...command],
-    { stdin: "pipe", stdout: "pipe", stderr: "pipe" },
+    {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      env: {
+        ...process.env,
+        PYTHONUTF8: "1",
+        PYTHONIOENCODING: "utf-8",
+        PYTHONUNBUFFERED: "1",
+      },
+    },
   )
   if (payload !== undefined) {
-    proc.stdin.write(payload)
+    proc.stdin.write(new TextEncoder().encode(payload))
   }
   proc.stdin.end()
-  const stdout = await new Response(proc.stdout).text()
-  const stderr = await new Response(proc.stderr).text()
-  const exitCode = await proc.exited
+  const [stdoutBytes, stderrBytes, exitCode] = await Promise.all([
+    new Response(proc.stdout).arrayBuffer(),
+    new Response(proc.stderr).arrayBuffer(),
+    proc.exited,
+  ])
+  const stdout = new TextDecoder("utf-8", { fatal: true }).decode(stdoutBytes)
+  const stderr = new TextDecoder("utf-8", { fatal: true }).decode(stderrBytes)
   if (exitCode !== 0) {
     throw new Error((stderr || stdout || `UCEF exited with ${exitCode}`).trim())
   }

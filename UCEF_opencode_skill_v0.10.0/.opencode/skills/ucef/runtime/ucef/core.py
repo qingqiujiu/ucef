@@ -39,7 +39,7 @@ def now_iso() -> str:
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict):
         raise ValueError(f"Expected a JSON object: {path}")
     return data

@@ -20,6 +20,19 @@ from .validator import IngestionValidator
 from .workspace import AnalysisWorkspace, DEFAULT_CONFIG
 
 
+def configure_utf8_stdio() -> None:
+    """Keep the OpenCode/Bun subprocess boundary deterministic on every OS."""
+    for stream, errors in ((sys.stdin, "strict"), (sys.stdout, "strict"), (sys.stderr, "backslashreplace")):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors=errors)
+
+
+def load_json_text(raw: str) -> Any:
+    """Parse UTF-8 text while accepting the optional BOM used by some Windows editors."""
+    return json.loads(raw.removeprefix("\ufeff"))
+
+
 def runtime_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -146,7 +159,7 @@ def cmd_submit_direct(args: argparse.Namespace) -> int:
     raw = args.payload if args.payload is not None else sys.stdin.read()
     if not raw.strip():
         raise ValueError("submit-direct requires JSON on stdin or --payload")
-    payload = json.loads(raw)
+    payload = load_json_text(raw)
     store = make_store(workspace)
     try:
         try:
@@ -195,7 +208,7 @@ def cmd_scenario_put(args: argparse.Namespace) -> int:
             raw = args.payload if args.payload is not None else sys.stdin.read()
             if not raw.strip():
                 raise ValueError("scenario-put requires --file, JSON on stdin, or --payload")
-            scenario = json.loads(raw)
+            scenario = load_json_text(raw)
         registered_sources = set(workspace.source_map())
         require_sources = bool((config.get("sources") or {}).get("require_registered_evidence", True))
         report = IngestionValidator(store, registered_sources, require_sources).ingest(
@@ -544,6 +557,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_utf8_stdio()
     args = build_parser().parse_args(argv)
     try:
         return int(args.func(args) or 0)

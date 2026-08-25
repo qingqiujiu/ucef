@@ -8,6 +8,6 @@ Run:
 python -m unittest discover -s tests -v
 ```
 
-Validated on 2026-08-25: 25 tests passed.
+Validated on 2026-08-25: 27 tests passed. Coverage includes a real UTF-8 `submit_block` subprocess running under an intentionally legacy Windows code-page environment, plus UTF-8 BOM workspace and artifact inputs.
 
 Final release count and archive hash are recorded after packaging in the repository release notes.

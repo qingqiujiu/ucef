@@ -5,6 +5,7 @@ import io
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -82,6 +83,10 @@ class OpenCodeAgentPackagingTests(unittest.TestCase):
         self.assertIn("payload", tool_text)
         self.assertIn("tool.schema.object({}).passthrough()", tool_text)
         self.assertNotIn("JSON.parse(args.payload)", tool_text)
+        self.assertIn('PYTHONUTF8: "1"', tool_text)
+        self.assertIn('PYTHONIOENCODING: "utf-8"', tool_text)
+        self.assertIn("new TextEncoder().encode(payload)", tool_text)
+        self.assertIn('new TextDecoder("utf-8", { fatal: true })', tool_text)
         for operation in (
             "workspace_bootstrap", "source_register", "scenario_register",
             "artifact_register", "site_build",
@@ -540,6 +545,45 @@ class DirectAnalysisTests(unittest.TestCase):
         self.assertEqual("BLOCK", next_block["role"])
         self.assertNotEqual(block["task_id"], next_block["task_id"])
 
+    def test_submit_block_process_boundary_forces_utf8_under_legacy_windows_codepage(self):
+        (self.root / "workspace.json").write_text(
+            json.dumps({"database": {"path": "ucef.db"}, "site": {"output": "site"}}),
+            encoding="utf-8",
+        )
+        started = self.service.start("SCN-DEMO-PREPAID", "STANDARD")
+        run_id = started["run"]["run_id"]
+        planner = self.service.next_task(run_id)["context"]["task"]
+        self.service.submit("plan", run_id, planner["task_id"], self.plan_payload(run_id))
+        task = self.service.next_task(run_id)["context"]["task"]
+        payload = self.block_payload(task, run_id)
+        payload["title"] = "金额💰进入支付链路✅"
+        payload["business_goal"] = "保留中文、箭头→、引号“测试”和 emoji"
+        self.store.commit()
+
+        environment = os.environ.copy()
+        environment.update({"PYTHONUTF8": "0", "PYTHONIOENCODING": "cp936"})
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts" / "ucef.py"),
+                "--workspace", str(self.root),
+                "submit-direct", "--kind", "block",
+                "--run-id", run_id,
+                "--task-id", task["task_id"],
+            ],
+            input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr.decode("utf-8", errors="replace"))
+        receipt = json.loads(result.stdout.decode("utf-8"))
+        self.assertEqual("ACCEPTED", receipt["status"])
+        persisted = self.store.get("business_blocks", task["block_id"])
+        self.assertEqual("金额💰进入支付链路✅", persisted["title"])
+        self.assertIn("箭头→", persisted["business_goal"])
+
     def test_elapsed_budget_stops_run_and_returns_publishable_status(self):
         started = self.service.start("SCN-DEMO-PREPAID", "QUICK")
         run = started["run"]
@@ -868,6 +912,26 @@ class IndependentWorkspaceTests(unittest.TestCase):
         content = page.read_text(encoding="utf-8")
         self.assertIn("***REDACTED***", content)
         self.assertNotIn("private-token", content)
+
+    def test_workspace_and_artifact_json_accept_utf8_bom(self):
+        bom_root = self.root / "bom-workspace"
+        bom_root.mkdir()
+        (bom_root / "workspace.json").write_text(
+            json.dumps({"database": {"path": "ucef.db"}, "site": {"output": "site"}}),
+            encoding="utf-8-sig",
+        )
+        workspace = AnalysisWorkspace.open(bom_root)
+        workspace.initialize_directories()
+        artifact_source = bom_root / "配置快照.json"
+        artifact_source.write_text(
+            json.dumps({"模式": "预付💰", "token": "secret"}, ensure_ascii=False),
+            encoding="utf-8-sig",
+        )
+        artifact_store = ArtifactStore(bom_root)
+        artifact = artifact_store.add_json(artifact_source)
+        stored = artifact_store.read_display_json(artifact)
+        self.assertEqual("预付💰", stored["模式"])
+        self.assertEqual("***REDACTED***", stored["token"])
 
     def test_cli_writes_only_to_explicit_workspace_from_arbitrary_cwd(self):
         original_cwd = Path.cwd()

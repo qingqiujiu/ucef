@@ -66,6 +66,19 @@ python .opencode/skills/ucef/scripts/ucef.py --workspace D:/ucef/order-analysis 
 
 默认结果位于 `D:/ucef/order-analysis/site/index.html`。旧版 Work Unit、Checkpoint 和 layered result 仍可导入，但不再是新分析的默认流程。
 
+## Windows UTF-8 与旧包覆盖
+
+OpenCode 工具启动 Python 时会强制 stdin、stdout 和 stderr 使用 UTF-8；`ucef_submit_plan`、`ucef_submit_block`、`ucef_submit_gap`、`ucef_submit_overview` 因而不再受 Windows GBK/ANSI 代码页影响。工作区和制品 JSON 接受 UTF-8 及带 BOM 的 UTF-8；GBK/ANSI 文件仍应先明确转换，避免静默乱码。
+
+如果已经安装紧邻本修正版的 v0.10.0，只需覆盖以下四个运行文件，然后重新加载 OpenCode 项目：
+
+- `.opencode/tools/ucef.ts`
+- `.opencode/skills/ucef/runtime/ucef/cli.py`
+- `.opencode/skills/ucef/runtime/ucef/core.py`
+- `.opencode/skills/ucef/runtime/ucef/artifacts.py`
+
+如果使用的是更早的 v0.10.0 包，建议直接用发布 ZIP 中的整个 `.opencode/` 覆盖旧目录，以同时取得任务合同、角色权限和 UTF-8 修复。覆盖前先保留你自行修改过的 Agent、MCP 名称或环境配置。
+
 ## 原始配置制品与可视化站点
 
 配置 JSON 不需要交给 Agent 改写或放入 Scenario 主页面。运行时会按内容哈希保存脱敏快照，并为它生成独立的可搜索 JSON 页面：
