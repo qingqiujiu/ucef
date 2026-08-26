@@ -1,0 +1,14 @@
+{
+  "plan_id": "PLAN-DEMO-DIRECT",
+  "scenario_id": "SCN-DEMO-PREPAID",
+  "run_id": "RUN-REPLACE-ME",
+  "critical_fields": ["orderNo", "amount", "paymentNo", "status"],
+  "terminal_outcome": "订单进入 PAID，并返回支付流水号",
+  "business_blocks": [
+    {"block_id": "BLOCK-DEMO-ENTRY", "logical_key": "order.create.accept", "sequence_no": 10, "title": "接收下单请求", "business_goal": "形成内部订单命令", "depth": "SUMMARY", "reason": "入口只完成校验和直接映射"},
+    {"block_id": "BLOCK-DEMO-ROUTE", "logical_key": "payment.route.select", "sequence_no": 20, "title": "选择支付通道", "business_goal": "根据生产配置选中预付实现", "depth": "CRITICAL", "reason": "生产配置决定实际执行分支"},
+    {"block_id": "BLOCK-DEMO-PAY", "logical_key": "payment.prepaid.create", "sequence_no": 30, "title": "创建支付单", "business_goal": "构造外部请求并消费支付响应", "depth": "CRITICAL", "reason": "包含外部边界和关键字段转换"},
+    {"block_id": "BLOCK-DEMO-SAVE", "logical_key": "order.payment.persist", "sequence_no": 40, "title": "保存支付结果", "business_goal": "持久化状态、支付流水和实付金额", "depth": "CRITICAL", "reason": "包含最终数据库副作用"},
+    {"block_id": "BLOCK-DEMO-RETURN", "logical_key": "order.create.respond", "sequence_no": 50, "title": "返回订单结果", "business_goal": "向调用方返回已支付订单", "depth": "SUMMARY", "reason": "终点只映射最终结果"}
+  ]
+}

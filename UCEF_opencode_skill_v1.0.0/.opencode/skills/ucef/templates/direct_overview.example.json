@@ -1,0 +1,14 @@
+{
+  "overview_id": "OVERVIEW-DEMO-DIRECT",
+  "scenario_id": "SCN-DEMO-PREPAID",
+  "run_id": "RUN-REPLACE-ME",
+  "one_sentence": "下单请求按生产配置选择预付通道，创建支付单、保存支付结果并返回已支付订单。",
+  "business_context": "订单创建必须在当前场景同步完成预付支付。",
+  "selected_route": {"route": "PREPAID", "reason": "生产 payment.mode=PREPAID"},
+  "ordered_block_ids": ["BLOCK-DEMO-ENTRY", "BLOCK-DEMO-ROUTE", "BLOCK-DEMO-PAY", "BLOCK-DEMO-SAVE", "BLOCK-DEMO-RETURN"],
+  "key_field_journeys": [{"field": "amount", "origin": "CreateOrderRequest.amountFen", "journey": "进入订单命令，分转元后外发", "sink": "PaymentRequest.amountYuan", "business_use": "实际扣款金额"}],
+  "external_effects": [{"system": "PaymentSystem", "operation": "createPayment", "request_origin": "订单号与转换后的金额", "response_use": "支付流水和状态用于落库", "business_effect": "创建支付单"}],
+  "persistence_effects": [{"store": "orders", "operation": "UPDATE", "field_mappings": "payment_no/status/paid_amount", "business_effect": "订单进入 PAID"}],
+  "failure_outcomes": [{"condition": "支付失败", "behavior": "停止后续成功落库", "business_outcome": "订单创建返回失败"}],
+  "open_gaps": []
+}

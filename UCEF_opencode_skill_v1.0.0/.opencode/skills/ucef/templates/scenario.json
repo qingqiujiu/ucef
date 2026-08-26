@@ -1,0 +1,17 @@
+{
+  "scenario_id": "SCN-REPLACE-ME",
+  "name": "替换为具体业务场景",
+  "business_operation": "UNKNOWN",
+  "business_goal": "UNKNOWN",
+  "trigger": {"kind": "UNKNOWN", "symbol": "UNKNOWN", "input_type": "UNKNOWN"},
+  "scope": {
+    "source_ids": ["REPLACE_WITH_REGISTERED_SOURCE_ID"],
+    "source_revisions": {"REPLACE_WITH_REGISTERED_SOURCE_ID": "UNKNOWN"},
+    "environment": "prod",
+    "config_snapshot_id": "UNKNOWN",
+    "request_constraints": {}
+  },
+  "expected_outcome": "UNKNOWN",
+  "critical_fields": ["amount", "paymentChannel"],
+  "status": "ACTIVE"
+}

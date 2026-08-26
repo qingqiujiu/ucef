@@ -1,0 +1,71 @@
+{
+  "summary": "确认预付订单的渠道决策、金额转换、支付调用和订单落库",
+  "focus": "PrepaidPaymentService#submit",
+  "scenario_summary": "订单服务根据支付渠道配置选择支付路径，将元转换为分后调用支付中心并保存订单。",
+  "systems": [
+    {"key": "order-service", "name": "订单系统", "summary": "接收下单请求并协调支付"},
+    {"key": "payment-center", "name": "支付中心", "summary": "执行渠道扣款"}
+  ],
+  "modules": [
+    {"key": "order-service.payment", "name": "预付支付模块", "system": "order-service"}
+  ],
+  "steps": [
+    {"key": "order.accept", "name": "接收预付订单请求", "sequence_no": 10},
+    {"key": "order.dto.copy", "name": "请求对象透传", "sequence_no": 15, "priority": "P2", "handoff": true}
+  ],
+  "decisions": [
+    {
+      "key": "payment.channel.route",
+      "name": "选择支付渠道",
+      "summary": "配置切换会改变支付系统的实际出站路径。",
+      "priority": "P0",
+      "sequence_no": 20,
+      "condition": "payment.channel.mode",
+      "config_keys": ["payment.channel.mode"],
+      "branches": [
+        {"name": "直连支付", "condition": "mode == DIRECT", "expected_value": "DIRECT", "business_effect": "同步调用支付中心"},
+        {"name": "异步支付", "condition": "mode == ASYNC", "expected_value": "ASYNC", "business_effect": "发送异步支付消息"}
+      ]
+    }
+  ],
+  "field_journeys": [
+    {
+      "key": "amount",
+      "name": "支付金额",
+      "priority": "P0",
+      "summary": "金额贯穿请求、渠道判断、支付报文和订单落库。",
+      "events": [
+        {"kind": "COPY", "from": "CreateOrderRequest.amount", "to": "OrderCommand.amount"},
+        {"kind": "DTO_COPY", "from": "OrderCommand.amount", "to": "PaymentContext.amount"},
+        {"kind": "UNIT_CONVERSION", "from": "PaymentContext.amount(元)", "to": "PaymentRequest.amountFen(分)", "summary": "BigDecimal 乘以 100，保留精确金额"},
+        {"kind": "PERSIST", "from": "PaymentContext.amount", "to": "t_order.pay_amount"},
+        {"kind": "OUTBOUND", "from": "PaymentRequest.amountFen", "to": "支付中心请求报文.amount"},
+        {"kind": "RESPONSE_CONSUME", "from": "PaymentResponse.paidAmount", "to": "Order.paymentResult"}
+      ]
+    }
+  ],
+  "interactions": [
+    {
+      "key": "order.payment.submit",
+      "name": "提交支付扣款",
+      "source_system": "order-service",
+      "target_system": "payment-center",
+      "protocol": "HTTP",
+      "operation": "POST /payments",
+      "sequence_no": 30,
+      "request_fields": {"amountFen": "CreateOrderRequest.amount × 100", "orderId": "订单主键"},
+      "response_fields": {"paidAmount": "更新订单支付结果", "transactionId": "落库支付流水号"},
+      "response_summary": "返回支付流水号和实际支付金额"
+    }
+  ],
+  "persistence": [
+    {
+      "key": "order.persist",
+      "name": "保存订单支付信息",
+      "table": "t_order",
+      "operation": "UPDATE",
+      "sequence_no": 40,
+      "field_mappings": {"pay_amount": "CreateOrderRequest.amount", "payment_transaction_id": "PaymentResponse.transactionId"}
+    }
+  ]
+}
