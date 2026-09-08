@@ -1,12 +1,12 @@
 # UCEF 持续开发版 for OpenCode
 
-`UCEF_opencode_skill/` 是随 Git 持续更新的唯一开发目录，不再为每次修改创建新的版本文件夹。历史 `UCEF_opencode_skill_v*` 目录和发布包只作为快照保留。
+`UCEF_opencode_skill/` 是随Git持续更新的唯一开发目录。历史 `UCEF_opencode_skill_v*` 和发布包只作为快照保留，后续修改不再创建新的版本文件夹。
 
-本版以大模型推理和 Obsidian Markdown 为核心：主模型理解业务全链路、重要字段生命周期和方法细节；轻量工具只保存调查状态、断点并校验链接，不建立事实图，也不生成 HTML。
+本版没有自定义 Runtime、Python脚本、SQLite、JSON提交协议或HTML生成器。UCEF是一套强业务分析提示词，直接使用已经安装的 `index-mcp` 与 `obsidian-mcp`：前者提供源码事实，后者承载持续笔记、图形与断点恢复。
 
-## 安装
+## 安装内容
 
-把本目录作为 OpenCode 控制目录使用，或将其中 `.opencode/` 合并到现有控制目录：
+将 `.opencode/` 合并到OpenCode控制目录，或直接把本目录作为控制项目：
 
 ```text
 UCEF_opencode_skill/
@@ -14,65 +14,72 @@ UCEF_opencode_skill/
     ├── agents/
     │   ├── ucef-java-chain.md
     │   └── ucef-probe.md
-    ├── tools/
-    │   └── ucef.ts
     └── skills/
         └── ucef/
+            ├── SKILL.md
+            └── references/
 ```
 
-后续在仓库中执行 Git 更新即可获得同一路径的新内容。若安装位置是复制出来的控制目录，需要再次同步 `.opencode/`；不要再复制到新的版本号目录。
+后续在仓库中更新Git即可得到同一路径的新内容。如果使用复制方式安装，只需同步 `.opencode/` 到原控制目录，不要创建新的版本号目录。
 
-运行时仅要求 Python 3.10+ 标准库。若 Python 命令不是 `python`，设置 `UCEF_PYTHON`。TypeScript 工具与 Python 之间固定使用 UTF-8。
+## 前置能力
 
-## Obsidian 分析目录
+- `index-mcp`：能够定位符号、定义、实现、引用、调用关系和精确源码区段；
+- `obsidian-mcp`：能够搜索、读取、创建和局部更新笔记，并支持Wikilink、块引用与Mermaid；
+- Obsidian Vault中的一个分析目录；
+- 源项目只读。
 
-为每项分析选择 Obsidian Vault 内的一个目录，例如：
+OpenCode中MCP工具通常以服务器名作为前缀。本版Agent默认允许：
 
 ```text
-D:/ObsidianVault/UCEF/订单处理分析
+index-mcp_*
+obsidian-mcp_*
 ```
 
-它就是 UCEF 工作区，不再另外创建 SQLite、站点、运行队列等目录。源码项目可以位于其他路径，并始终保持只读。
+若你的实际注册名不同，只修改 `.opencode/agents/*.md` frontmatter中的权限前缀。不要为匹配名称重新包装一层UCEF工具。
 
-在 OpenCode 中选择 `ucef-java-chain`，给出分析目录、源码范围和业务目标。主 Agent 会按需调用 `ucef_workspace_init`，创建：
+## 启动
+
+选择 `ucef-java-chain`，给出：
+
+- Obsidian分析目录或目标Vault位置；
+- 源码范围；
+- 用户真正关心的业务问题；
+- 已知入口、重点字段或限制条件（如果有）。
+
+示例：
+
+```text
+使用 ucef-java-chain 分析这项业务。
+分析笔记写入 Obsidian 的 UCEF/本次分析。
+源码通过当前 index-mcp 只读访问。
+
+请从业务视角解释完整链路、关键分支为什么发生、重要字段的完整生命周期，
+识别关键模块，并让主链中的每个方法都能跳转到详细笔记。
+根据真实关系生成有助于理解的时序图、流程图、状态图、ER图或字段流转图；
+无法确认的运行条件和关系明确保留为未知。
+```
+
+主Agent会先用 `obsidian-mcp` 查找 `调查状态.md`。已有分析从恢复胶囊继续；新分析只创建最小入口，再随着理解增加笔记。
+
+## 推荐笔记
+
+不要求一次性创建完整目录。最终通常包括：
 
 ```text
 分析首页.md
+调查状态.md
 业务全链路.md
 字段生命周期.md
-方法明细/
+关键模块.md
+方法明细/...
 证据库.md
-调查工作台.md
-附件/
-.ucef/state.json
 ```
 
-已有文件不会被初始化覆盖。
+这些是阅读入口，不是必须填满的输出Schema。内容规模和拆分方式由模型根据实际业务决定。
 
-## 轻量工具
+## 更新与迁移
 
-- `ucef_workspace_init`：创建或恢复最小 Obsidian 分析目录。
-- `ucef_state_read`：默认只读取当前焦点、关键未知和最近检查点。
-- `ucef_state_update`：理解改变时原子更新 JSON 状态。
-- `ucef_state_checkpoint`：中断或切换重点前保存恢复摘要。
-- `ucef_workspace_validate`：检查 UTF-8、状态引用、Wikilink 和块锚点。
+Skill更新只需要Git拉取或重新同步 `.opencode/`。分析成果始终留在Obsidian中，不受Skill目录更新影响。
 
-工具不判断业务对象、不计算覆盖率、不决定分析重点，也不生成正文。
-
-## Obsidian MCP
-
-主 Agent 默认允许 `obsidian_*` 和 `mcp_obsidian_*`。如果你的 MCP 工具前缀不同，请修改 `.opencode/agents/ucef-java-chain.md` 中的权限模式。没有 Obsidian MCP 时，主 Agent可用普通文件工具写入分析目录。
-
-## 直接诊断
-
-必要时可以直接调用脚本；Agent 正常分析不需要阅读脚本用法：
-
-```bash
-python .opencode/skills/ucef/scripts/ucef_state.py --workspace D:/ObsidianVault/UCEF/订单处理分析 init --goal "理解该业务的完整执行链路"
-python .opencode/skills/ucef/scripts/ucef_state.py --workspace D:/ObsidianVault/UCEF/订单处理分析 status
-python .opencode/skills/ucef/scripts/ucef_state.py --workspace D:/ObsidianVault/UCEF/订单处理分析 validate
-```
-
-## 与旧版本的关系
-
-这是一次架构重写，不直接读取旧版 SQLite 事实图，也不会覆盖旧工作区。需要复用旧结论时，将真正有价值的结论与证据人工迁入新的 Obsidian 笔记；不要把旧实体库存整体转换过来。
+旧版SQLite/HTML工作区不会自动转换。需要复用时，将真正有价值且能够重新验证的结论链接或迁入Obsidian；不要把旧实体库存整体导入。
