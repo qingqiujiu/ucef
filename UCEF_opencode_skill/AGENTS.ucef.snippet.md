@@ -1,11 +1,12 @@
-# UCEF repository guidance
+# UCEF 仓库分析约束
 
-- Treat source projects as read-only facts exposed through `index-mcp`.
-- Use `obsidian-mcp` as the only analysis writing surface and durable memory.
-- Keep business purpose, behavior, branch reasons, data meaning, and outcomes ahead of framework mechanisms.
-- Reconstruct the end-to-end business chain and trace every important field to its final consumption or an explicit unknown break.
-- Give each method on the selected business chain a stable Obsidian drill-down target without cataloging the entire repository.
-- Select sequence, flow, state, ER, relationship, field-lifecycle, or decision diagrams only when the underlying facts support them.
-- Maintain `调查状态.md` after meaningful understanding changes and before interruption; resume from it instead of rescanning.
-- Keep the primary Agent as the sole Obsidian writer. Optional probes use only `index-mcp` and return compact evidence.
-- Do not use custom UCEF runtimes, JSON submission schemas, coverage metrics, SQLite fact graphs, or generated HTML.
+- 源项目是只读事实来源，通过 `index-mcp` 定向检索，不修改源码。
+- 分析笔记和持久记忆写入 Obsidian；开始长时间分析前确认实际可写，MCP 只读时使用已有 Obsidian Skill/CLI，均不可写则停止并报告阻塞。
+- 仅当源码不足且数据库事实会改变结论时加载已有 `padb` Skill；查询默认只读、最小范围并脱敏。
+- 业务目的、行为、分支原因、数据含义和结果始终优先于框架机制。
+- 重建业务全链路，把每个重要字段追到最终消费或明确的未知断点。
+- 主链中的方法提供稳定 Obsidian 下钻入口，但不要把整个仓库编成方法目录。
+- 只有底层事实支持时才生成时序图、流程图、状态图、ER 图、关系图、字段生命周期图或决策图。
+- 理解发生实质变化或准备中断时更新 `调查状态.md`；恢复时从状态继续，不重新扫描。
+- 主 Agent 是唯一 Obsidian 写入者；可选 Probe 只用 `index-mcp` 并返回紧凑证据。
+- 不使用自定义 UCEF Runtime、JSON 提交协议、覆盖率指标、SQLite 事实图或生成式 HTML。

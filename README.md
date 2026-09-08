@@ -19,7 +19,7 @@ UCEF（Unified Code Excavation Framework）是面向大型 Java 系统的业务�
 - [安装与更新说明](UCEF_opencode_skill/README_INSTALL.md)
 - [Agent 配置](UCEF_opencode_skill/OPENCODE_AGENT_SETUP.md)
 
-当前开发版采用“强提示词主导推理、Obsidian 承载知识、现有 MCP 提供检索与读写”的架构。主模型负责理解业务全链路、分支原因、重要字段生命周期、关键模块和逐方法下钻，并依据内容自主选择时序图、流程图、状态图、ER 图、关系图或决策图。UCEF 不再提供自建 Runtime、状态脚本、JSON 控制面、SQLite 事实图或 HTML 生成器。
+当前开发版采用“强提示词主导推理、Obsidian 承载知识、现有 MCP/Skill 提供事实能力”的架构。主模型通过 `index-mcp` 理解源码，在确有需要时通过用户已有的 `padb` 查询数据库，并使用可写的 `obsidian-mcp` 或现有 Obsidian Skill/CLI 维护断点与交付。模型负责理解业务全链路、分支原因、重要字段生命周期、关键模块和逐方法下钻，并依据内容自主选择时序图、流程图、状态图、ER 图、关系图或决策图。UCEF 不再提供自建 Runtime、状态脚本、JSON 控制面、SQLite 事实图或 HTML 生成器。
 
 最新发布快照为 **v1.0.0**，保留在 [UCEF_opencode_skill_v1.0.0/](UCEF_opencode_skill_v1.0.0/) 及对应 ZIP 中。历史源码快照和发布包不会随开发版更新。
 
@@ -34,7 +34,7 @@ UCEF（Unified Code Excavation Framework）是面向大型 Java 系统的业务�
 - `index-mcp_*` IDEA 语义索引工具配置；
 - 独立 UCEF 工作区、SQLite 事实账本、审计和 HTML 生成运行时。
 
-源码项目始终是只读数据源。持续开发版通过已有 `index-mcp` 检索代码，通过已有 `obsidian-mcp` 维护用户指定知识库中的 Markdown、Wikilink、块引用和 Mermaid 图；UCEF 只规定调用策略，不重复封装这两个 MCP。旧发布版仍按各自说明使用独立工作区。
+源码项目始终是只读数据源。持续开发版通过已有 `index-mcp` 检索代码，通过可写的 `obsidian-mcp` 或现有 Obsidian Skill/CLI 维护 Markdown、Wikilink、块引用和 Mermaid 图，并在必要时加载已有 `padb` 查询数据库。UCEF 只规定这些能力的启用条件和证据纪律，不重复封装工具。旧发布版仍按各自说明使用独立工作区。
 
 ## 版本历史
 

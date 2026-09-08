@@ -1,6 +1,6 @@
 ---
 name: ucef
-description: Analyze unfamiliar software from the business perspective and build an accurate, navigable Obsidian dossier. Use when tracing an end-to-end business chain, explaining why branches are taken, following important fields through their lifecycle, identifying key modules and methods, or producing evidence-backed sequence, state, ER, flow, and relationship diagrams from source code.
+description: 从业务视角深挖陌生软件并建立可导航的 Obsidian 档案。Analyze end-to-end business chains, branch reasons, important-field lifecycles, key modules and methods, using source code and optional database evidence to produce accurate conclusions and evidence-backed diagrams.
 ---
 
 # UCEF：业务全链路深度挖掘
@@ -17,9 +17,10 @@ UCEF 是分析方法，不是数据填报框架。不要把结果压入固定实
 
 - `index-mcp` 是源码事实入口，用于符号、定义、实现、引用、调用关系和精确代码区段的定向检索。
 - `obsidian-mcp` 是长期记忆与交付入口，用于查找、读取、创建和局部更新笔记，维护 Wikilink、块引用、反向链接和 Mermaid。
+- `padb` 是按需加载的数据库查询 Skill，用于静态代码无法确认的表结构、字段含义、有效配置或必要运行数据；它不是每次分析的固定步骤。
 - `ucef-probe` 只是可选的窄问题调查者；主 Agent 始终保有全局业务判断和笔记合并权。
 
-具体调用策略见 [MCP_USAGE.md](references/MCP_USAGE.md)。不要调用旧版 UCEF 的状态、提交、事实图、覆盖率、SQLite、HTML 或站点工具。
+源码与笔记调用策略见 [MCP_USAGE.md](references/MCP_USAGE.md)。当前问题确实需要数据库事实时，再读取 [PADB_USAGE.md](references/PADB_USAGE.md) 并加载 `padb`。不要调用旧版 UCEF 的状态、提交、事实图、覆盖率、SQLite、HTML 或站点工具。
 
 ## 开始与恢复
 
@@ -27,6 +28,8 @@ UCEF 是分析方法，不是数据填报框架。不要把结果压入固定实
 
 - 已存在时，只读取它、`分析首页.md` 和“当前焦点”直接链接的少量笔记，先恢复再继续。
 - 不存在时，创建最小入口 `分析首页.md` 与 `调查状态.md`，理解任务后再按需要增加笔记。
+
+在开始长时间检索前，确认当前环境实际具备 Obsidian 创建或局部更新能力。若 `obsidian-mcp` 只有读取能力，使用用户已经安装的 Obsidian Skill/CLI 所规定的写入方式；两者都不能写时立即说明阻塞，不在一次性聊天上下文中继续大规模分析。
 
 恢复时不要重新全库扫描。检查恢复胶囊中的用户目标、业务边界、已确认结论、当前焦点、矛盾、待探索问题和下一步精确入口，然后从收益最高的未完成问题继续。
 
@@ -124,7 +127,9 @@ UCEF 是分析方法，不是数据填报框架。不要把结果压入固定实
 
 ## 证据和准确性
 
-关键结论使用源码位置、调用关系、数据定义、持久化映射、配置来源、运行材料或其他可信材料支撑。证据必须说明“它证明了什么”，不能只堆文件名和行号。
+关键结论使用源码位置、调用关系、数据定义、持久化映射、配置来源、数据库查询、运行材料或其他可信材料支撑。证据必须说明“它证明了什么”，不能只堆文件名、行号或查询结果。
+
+代码事实、数据库元数据、配置有效值、业务数据样本和运行轨迹是不同证据。数据库中存在一条记录不等于某次请求确实走过某条路径；只有查询范围、环境、时间和关联键足以支持时，才能提升为当前场景结论。
 
 对重要结论标记为：已确认、较强推断、待确认或已被反例否定。没有可信运行条件时不猜当前环境路径；没有真实关系时不猜 ER；没有看到响应消费时不声称外部调用已经闭环。
 
@@ -134,9 +139,11 @@ UCEF 是分析方法，不是数据填报框架。不要把结果压入固定实
 
 理解发生实质变化时，用 `obsidian-mcp` 局部更新相关业务笔记和 `调查状态.md`。不要等全部分析结束后一次性回忆，也不要每次源码查询都写笔记。
 
-以下事件需要更新恢复胶囊：形成关键结论、改变当前假设、发现重要字段或分支、完成一个业务阶段、切换焦点、收到 Probe 结果、发现矛盾，以及准备中断或结束。
+以下事件需要更新恢复胶囊：形成关键结论、改变当前假设、发现重要字段或分支、完成一个业务阶段、切换焦点、收到 Probe 或 `padb` 结果、发现矛盾，以及准备中断或结束。
 
 恢复胶囊保持紧凑，记录“现在知道什么、还不知道什么、下一步从哪里继续”，不复制大段源码和完整历史。
+
+每次写入恢复胶囊前，按 [OBSIDIAN_WORKFLOW.md](references/OBSIDIAN_WORKFLOW.md) 做一次简短自检。恢复后只抽查与当前焦点最相关的一两条高影响证据，不重新验证全部历史，也不无条件相信已经漂移的摘要。
 
 ## Probe
 

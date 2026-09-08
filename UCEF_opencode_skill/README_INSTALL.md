@@ -2,7 +2,7 @@
 
 `UCEF_opencode_skill/` 是随Git持续更新的唯一开发目录。历史 `UCEF_opencode_skill_v*` 和发布包只作为快照保留，后续修改不再创建新的版本文件夹。
 
-本版没有自定义 Runtime、Python脚本、SQLite、JSON提交协议或HTML生成器。UCEF是一套强业务分析提示词，直接使用已经安装的 `index-mcp` 与 `obsidian-mcp`：前者提供源码事实，后者承载持续笔记、图形与断点恢复。
+本版没有自定义 Runtime、Python脚本、SQLite、JSON提交协议或HTML生成器。UCEF是一套强业务分析提示词，直接使用已经安装的 `index-mcp` 与 `obsidian-mcp`：前者提供源码事实，后者承载持续笔记、图形与断点恢复；遇到源码无法确认的数据库问题时，按需加载用户已有的 `padb` Skill。
 
 ## 安装内容
 
@@ -26,17 +26,19 @@ UCEF_opencode_skill/
 
 - `index-mcp`：能够定位符号、定义、实现、引用、调用关系和精确源码区段；
 - `obsidian-mcp`：能够搜索、读取、创建和局部更新笔记，并支持Wikilink、块引用与Mermaid；
+- `padb`（可选）：能够按自身说明只读查询数据库，用于必要的配置、元数据和运行数据佐证；
+- 如果 `obsidian-mcp` 只读，需要已有 Obsidian Skill/CLI 提供写入能力；
 - Obsidian Vault中的一个分析目录；
 - 源项目只读。
 
-OpenCode中MCP工具通常以服务器名作为前缀。本版Agent默认允许：
+OpenCode中MCP工具通常以服务器名作为前缀。本版 Agent 默认直接允许：
 
 ```text
 index-mcp_*
 obsidian-mcp_*
 ```
 
-若你的实际注册名不同，只修改 `.opencode/agents/*.md` frontmatter中的权限前缀。不要为匹配名称重新包装一层UCEF工具。
+其他未知工具默认询问授权，以兼容 `padb` 或 Obsidian CLI 的实际实现。若你的 MCP 注册名不同，只修改 `.opencode/agents/*.md` frontmatter 中的权限前缀；若希望数据库查询不逐次询问，把 `padb` 自身文档要求的最小只读工具权限合并进去。不要为匹配名称重新包装一层 UCEF 工具，也不要改成全局无条件允许。
 
 ## 启动
 
@@ -53,6 +55,7 @@ obsidian-mcp_*
 使用 ucef-java-chain 分析这项业务。
 分析笔记写入 Obsidian 的 UCEF/本次分析。
 源码通过当前 index-mcp 只读访问。
+需要数据库事实时加载 padb，并严格保持只读和最小范围。
 
 请从业务视角解释完整链路、关键分支为什么发生、重要字段的完整生命周期，
 识别关键模块，并让主链中的每个方法都能跳转到详细笔记。
@@ -61,6 +64,8 @@ obsidian-mcp_*
 ```
 
 主Agent会先用 `obsidian-mcp` 查找 `调查状态.md`。已有分析从恢复胶囊继续；新分析只创建最小入口，再随着理解增加笔记。
+
+开始大规模检索前，主 Agent 会先确认 Obsidian 确实存在可写路径，避免分析结果只停留在易丢失的聊天上下文中。
 
 ## 推荐笔记
 
