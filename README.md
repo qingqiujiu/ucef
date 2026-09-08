@@ -19,7 +19,7 @@ UCEF（Unified Code Excavation Framework）是面向大型 Java 系统的业务�
 - [安装与更新说明](UCEF_opencode_skill/README_INSTALL.md)
 - [Agent 配置](UCEF_opencode_skill/OPENCODE_AGENT_SETUP.md)
 
-当前开发版采用“强提示词主导推理、Obsidian 承载知识、现有 MCP/Skill 提供事实能力”的架构。主模型通过 `index-mcp` 理解源码，在确有需要时通过用户已有的 `padb` 查询数据库，并使用可写的 `obsidian-mcp` 或现有 Obsidian Skill/CLI 维护断点与交付。模型负责理解业务全链路、分支原因、重要字段生命周期、关键模块和逐方法下钻，并依据内容自主选择时序图、流程图、状态图、ER 图、关系图或决策图。UCEF 不再提供自建 Runtime、状态脚本、JSON 控制面、SQLite 事实图或 HTML 生成器。
+当前开发版采用“强提示词主导推理、Obsidian 承载知识、现有 MCP/Skill 提供事实能力”的架构。每次挖掘以名称明确的 Obsidian 分析入口作为唯一身份，与当前工作目录和源码位置解耦；主模型通过 `index-mcp` 识别并分析一个或多个实际项目，主动委派独立源码问题，在确有需要时通过用户已有的 `padb` 查询数据库。正式内容可由用户自由调整，调查状态只保存恢复指针。UCEF 不再提供自建 Runtime、状态脚本、JSON 控制面、SQLite 事实图或 HTML 生成器。
 
 最新发布快照为 **v1.0.0**，保留在 [UCEF_opencode_skill_v1.0.0/](UCEF_opencode_skill_v1.0.0/) 及对应 ZIP 中。历史源码快照和发布包不会随开发版更新。
 
