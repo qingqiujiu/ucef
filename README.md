@@ -11,20 +11,21 @@ UCEF（Unified Code Excavation Framework）是面向大型 Java 系统的业务�
 - 外部接口入参来源、反参用途、失败语义和业务效果；
 - 长链路分析中的持久化事实、断点恢复和已分析知识复用。
 
-## 当前版本
+## 持续开发版
 
-当前稳定版本为 **v0.10.0**：
+从 1.1 开始，开发版固定维护在不带版本号的目录中，不再为每次修改新建源码文件夹：
 
-- [源码与 OpenCode Skill](UCEF_opencode_skill_v0.10.0/)
-- [安装说明](UCEF_opencode_skill_v0.10.0/README_INSTALL.md)
-- [发布压缩包](UCEF_opencode_skill_v0.10.0_release.zip)
-- [测试状态](UCEF_opencode_skill_v0.10.0/TEST_STATUS.md)
+- [持续更新的 OpenCode Skill](UCEF_opencode_skill/)
+- [安装与更新说明](UCEF_opencode_skill/README_INSTALL.md)
+- [Agent 配置](UCEF_opencode_skill/OPENCODE_AGENT_SETUP.md)
 
-v0.10.0 将默认流程压缩为 ScenarioPlan、BusinessBlock、ScenarioOverview 三类最终产物。STANDARD 最多 7 个业务块、2 个深挖块、4 次模型任务和 20 分钟；子 Agent 直接校验入库，父 Agent 只接收 receipt，不再多层搬运与重写。超时续跑会复用已存 Plan 和完成块，只补未完成块，不再重新派发 Planner。任务胶囊自带中文、结构化的最小输出模板，Agent 不再阅读脚本或凭记忆拼提交结构。HTML 默认只显示中文业务结论与确定性 SVG 时序图，技术依据点击后打开；原始配置以脱敏 JSON 制品独立展示，Scenario 与 Agent 上下文只保存引用。
+当前开发版采用“提示词主导分析、Obsidian 承载知识、轻量工具保存状态”的新架构。主模型负责理解业务全链路、重要字段生命周期和逐方法下钻；程序只维护紧凑 JSON 状态、断点、UTF-8 原子写入和链接校验，不再建立固定事实图或生成 HTML。
+
+最新发布快照为 **v1.0.0**，保留在 [UCEF_opencode_skill_v1.0.0/](UCEF_opencode_skill_v1.0.0/) 及对应 ZIP 中。历史源码快照和发布包不会随开发版更新。
 
 ## OpenCode 集成
 
-发布包包含：
+历史发布包通常包含：
 
 - `ucef` Skill；
 - 全权限 `ucef-java-chain` 主 Agent；
@@ -33,7 +34,7 @@ v0.10.0 将默认流程压缩为 ScenarioPlan、BusinessBlock、ScenarioOverview
 - `index-mcp_*` IDEA 语义索引工具配置；
 - 独立 UCEF 工作区、SQLite 事实账本、审计和 HTML 生成运行时。
 
-Java 项目始终是只读数据源。UCEF 的数据库、Work Unit、上下文包、运行结果和站点只写入用户指定的独立分析工作区。
+源码项目始终是只读数据源。持续开发版只向用户指定的 Obsidian 分析目录写入 Markdown 与 `.ucef/state.json`；旧发布版仍按各自说明使用独立工作区。
 
 ## 版本历史
 
@@ -41,4 +42,4 @@ Java 项目始终是只读数据源。UCEF 的数据库、Work Unit、上下文�
 
 ## 验证
 
-v0.10.0 已通过 29 项运行时、自描述任务合同、单次修正限制、硬预算、超时续跑、UTF-8 进程边界、直接提交、幂等回执、工作区、旧数据兼容、制品脱敏、方法树、字段谱系、OpenCode Agent 和 HTML 回归测试；发布包另做解压回归。运行时仅依赖 Python 3.10+ 标准库。
+持续开发版在提交前进行 Skill 结构、Python 语法、JSON/UTF-8、最小状态更新和 Obsidian 链接静态校验。本次架构重写不运行智能体测试，也未制作发布包。
