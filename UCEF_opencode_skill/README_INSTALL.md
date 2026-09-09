@@ -10,17 +10,19 @@
 
 ```text
 UCEF_opencode_skill/
-└── .opencode/
-    ├── agents/
-    │   ├── ucef-java-chain.md
-    │   └── ucef-probe.md
-    └── skills/
-        └── ucef/
-            ├── SKILL.md
-            └── references/
+├── .opencode/
+│   ├── agents/
+│   │   ├── ucef-java-chain.md
+│   │   └── ucef-probe.md
+│   └── skills/
+│       └── ucef/
+│           ├── SKILL.md
+│           └── references/
+└── obsidian/
+    └── ucef.css              可选外观
 ```
 
-后续在仓库中更新Git即可得到同一路径的新内容。如果使用复制方式安装，只需同步 `.opencode/` 到原控制目录，不要创建新的版本号目录。
+后续在仓库中更新 Git 即可得到同一路径的新内容。如果使用复制方式安装，核心能力只需同步 `.opencode/` 到原控制目录；已经启用可选外观时再同步 `obsidian/ucef.css`，不要创建新的版本号目录。
 
 ## 前置能力
 
@@ -85,6 +87,16 @@ index-mcp_*
 ```
 
 这些是阅读入口，不是必须填满的输出Schema。内容规模和拆分方式由模型根据实际业务决定。
+
+同一业务域存在多条链路时，可以再建立 `<业务域>｜业务地图.md` 聚合各链路入口，并按需使用“链路/公共知识”子目录。目录只是默认阅读布局；每条链路仍以自己的入口和状态为身份，跨项目链路不按 Git 仓库拆散。
+
+遇到以前分析过的方法、字段或模块时，主 Agent 会先按源项目与完整符号检索旧笔记并核验源码版本。对象自身不随链路变化的部分进入公共知识，当前调用者、参数、命中分支、字段含义和业务结果留在当前链路。拿不准时先不抽象，避免较弱模型错误合并。
+
+## 可选 Obsidian 外观
+
+将 `obsidian/ucef.css` 复制到目标 Vault 的 `.obsidian/snippets/ucef.css`，然后在 Obsidian“外观 → CSS 代码片段”中启用。笔记可使用 `ucef-entry`、`ucef-chain`、`ucef-shared` 或 `ucef-state` 作为 `cssclasses`。
+
+CSS 只调整标题、内容宽度、Callout、表格和链接外观。未安装、未启用或没有添加样式类时，全部笔记仍是完整可读的标准 Markdown，不影响模型分析与断点恢复。
 
 ## 更新与迁移
 
