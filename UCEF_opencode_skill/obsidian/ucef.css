@@ -2,6 +2,7 @@
 
 .markdown-preview-view.ucef-entry,
 .markdown-preview-view.ucef-chain,
+.markdown-preview-view.ucef-map,
 .markdown-preview-view.ucef-shared,
 .markdown-preview-view.ucef-state {
   --ucef-accent: var(--interactive-accent);
@@ -10,7 +11,8 @@
 }
 
 .markdown-preview-view.ucef-entry .markdown-preview-sizer,
-.markdown-preview-view.ucef-chain .markdown-preview-sizer {
+.markdown-preview-view.ucef-chain .markdown-preview-sizer,
+.markdown-preview-view.ucef-map .markdown-preview-sizer {
   max-width: 1080px;
 }
 
@@ -21,6 +23,7 @@
 
 .markdown-preview-view.ucef-entry h1,
 .markdown-preview-view.ucef-chain h1,
+.markdown-preview-view.ucef-map h1,
 .markdown-preview-view.ucef-shared h1,
 .markdown-preview-view.ucef-state h1 {
   border-bottom: 2px solid var(--ucef-accent);
@@ -30,6 +33,7 @@
 
 .markdown-preview-view.ucef-entry h2,
 .markdown-preview-view.ucef-chain h2,
+.markdown-preview-view.ucef-map h2,
 .markdown-preview-view.ucef-shared h2,
 .markdown-preview-view.ucef-state h2 {
   border-left: 4px solid var(--ucef-accent);
@@ -39,6 +43,7 @@
 
 .markdown-preview-view.ucef-entry .callout,
 .markdown-preview-view.ucef-chain .callout,
+.markdown-preview-view.ucef-map .callout,
 .markdown-preview-view.ucef-shared .callout,
 .markdown-preview-view.ucef-state .callout {
   border-radius: 10px;
@@ -47,6 +52,7 @@
 
 .markdown-preview-view.ucef-entry table,
 .markdown-preview-view.ucef-chain table,
+.markdown-preview-view.ucef-map table,
 .markdown-preview-view.ucef-shared table,
 .markdown-preview-view.ucef-state table {
   width: 100%;
@@ -59,6 +65,7 @@
 
 .markdown-preview-view.ucef-entry th,
 .markdown-preview-view.ucef-chain th,
+.markdown-preview-view.ucef-map th,
 .markdown-preview-view.ucef-shared th,
 .markdown-preview-view.ucef-state th {
   background: var(--ucef-panel);
@@ -66,6 +73,7 @@
 
 .markdown-preview-view.ucef-entry .internal-link,
 .markdown-preview-view.ucef-chain .internal-link,
+.markdown-preview-view.ucef-map .internal-link,
 .markdown-preview-view.ucef-shared .internal-link,
 .markdown-preview-view.ucef-state .internal-link {
   text-decoration-thickness: 1px;
@@ -78,6 +86,7 @@
 }
 
 .markdown-preview-view.ucef-shared code,
-.markdown-preview-view.ucef-chain code {
+.markdown-preview-view.ucef-chain code,
+.markdown-preview-view.ucef-map code {
   border: 1px solid var(--ucef-border);
 }
